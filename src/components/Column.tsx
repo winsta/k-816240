@@ -4,10 +4,18 @@ import Card from './Card';
 import { Button } from './ui/button';
 import { Plus } from 'lucide-react';
 
+interface Task {
+  id: string;
+  content: string;
+  priority: 'low' | 'medium' | 'high';
+  dueDate?: Date;
+  tags: string[];
+}
+
 interface ColumnProps {
   id: string;
   title: string;
-  cards: Array<{ id: string; content: string }>;
+  cards: Task[];
   onAddTask: () => void;
 }
 
@@ -35,7 +43,15 @@ const Column = ({ id, title, cards, onAddTask }: ColumnProps) => {
             }`}
           >
             {cards.map((card, index) => (
-              <Card key={card.id} id={card.id} index={index} content={card.content} />
+              <Card 
+                key={card.id} 
+                id={card.id} 
+                index={index} 
+                content={card.content}
+                priority={card.priority}
+                dueDate={card.dueDate}
+                tags={card.tags}
+              />
             ))}
             {provided.placeholder}
           </div>
