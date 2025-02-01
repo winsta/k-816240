@@ -15,11 +15,11 @@ const Card = ({ id, index, content }: CardProps) => {
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          className={`p-4 mb-3 rounded-lg bg-kanban-card shadow-sm hover:shadow-md transition-shadow duration-200 ${
+          className={`p-4 mb-3 rounded-lg bg-kanban-card shadow-sm hover:shadow-md transition-shadow duration-200 select-none ${
             snapshot.isDragging ? 'shadow-lg' : ''
           }`}
         >
-          <p className="text-sm text-gray-700">{content}</p>
+          <p className="text-sm text-gray-700 cursor-default">{content}</p>
         </div>
       )}
     </Draggable>
