@@ -4,6 +4,14 @@ import Column from './Column';
 import { Button } from './ui/button';
 import { Plus } from 'lucide-react';
 import { useToast } from './ui/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "./ui/dialog";
+import { Input } from "./ui/input";
 
 interface KanbanData {
   [key: string]: {
@@ -39,6 +47,9 @@ const initialData: KanbanData = {
 
 const KanbanBoard = () => {
   const [columns, setColumns] = useState<KanbanData>(initialData);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newTaskContent, setNewTaskContent] = useState('');
+  const [activeColumn, setActiveColumn] = useState<string | null>(null);
   const { toast } = useToast();
 
   const onDragEnd = (result: DropResult) => {
@@ -82,44 +93,84 @@ const KanbanBoard = () => {
   };
 
   const addTask = (columnId: string) => {
-    const newTaskId = `task-${Date.now()}`;
-    const column = columns[columnId];
-    const newTask = {
-      id: newTaskId,
-      content: "New task"
-    };
+    setActiveColumn(columnId);
+    setNewTaskContent('');
+    setIsDialogOpen(true);
+  };
 
-    setColumns({
-      ...columns,
-      [columnId]: {
-        ...column,
-        items: [...column.items, newTask]
-      }
-    });
+  const handleAddTask = () => {
+    if (activeColumn && newTaskContent.trim()) {
+      const newTaskId = `task-${Date.now()}`;
+      const column = columns[activeColumn];
+      const newTask = {
+        id: newTaskId,
+        content: newTaskContent.trim()
+      };
 
-    toast({
-      title: "Task added",
-      description: "New task has been added to the column",
-    });
+      setColumns({
+        ...columns,
+        [activeColumn]: {
+          ...column,
+          items: [...column.items, newTask]
+        }
+      });
+
+      setIsDialogOpen(false);
+      setNewTaskContent('');
+      setActiveColumn(null);
+
+      toast({
+        title: "Task added",
+        description: "New task has been added to the column",
+      });
+    }
   };
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <div className="flex flex-col items-center min-h-screen bg-gray-50 p-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">Project Tasks</h1>
-        <div className="flex flex-wrap justify-center gap-4">
-          {Object.entries(columns).map(([columnId, column]) => (
-            <Column
-              key={columnId}
-              id={columnId}
-              title={column.title}
-              cards={column.items}
-              onAddTask={() => addTask(columnId)}
-            />
-          ))}
+    <>
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="flex flex-col items-center min-h-screen bg-gray-50 p-8">
+          <h1 className="text-3xl font-bold text-gray-800 mb-8">Project Tasks</h1>
+          <div className="flex flex-wrap justify-center gap-4">
+            {Object.entries(columns).map(([columnId, column]) => (
+              <Column
+                key={columnId}
+                id={columnId}
+                title={column.title}
+                cards={column.items}
+                onAddTask={() => addTask(columnId)}
+              />
+            ))}
+          </div>
         </div>
-      </div>
-    </DragDropContext>
+      </DragDropContext>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Task</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Enter task description"
+              value={newTaskContent}
+              onChange={(e) => setNewTaskContent(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleAddTask();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddTask}>Add Task</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
