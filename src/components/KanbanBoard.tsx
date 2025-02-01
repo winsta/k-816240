@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
 import Column from './Column';
+import { Button } from './ui/button';
+import { Plus } from 'lucide-react';
+import { useToast } from './ui/use-toast';
 
 interface KanbanData {
   [key: string]: {
@@ -36,6 +39,7 @@ const initialData: KanbanData = {
 
 const KanbanBoard = () => {
   const [columns, setColumns] = useState<KanbanData>(initialData);
+  const { toast } = useToast();
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -77,6 +81,28 @@ const KanbanBoard = () => {
     }
   };
 
+  const addTask = (columnId: string) => {
+    const newTaskId = `task-${Date.now()}`;
+    const column = columns[columnId];
+    const newTask = {
+      id: newTaskId,
+      content: "New task"
+    };
+
+    setColumns({
+      ...columns,
+      [columnId]: {
+        ...column,
+        items: [...column.items, newTask]
+      }
+    });
+
+    toast({
+      title: "Task added",
+      description: "New task has been added to the column",
+    });
+  };
+
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="flex flex-col items-center min-h-screen bg-gray-50 p-8">
@@ -88,6 +114,7 @@ const KanbanBoard = () => {
               id={columnId}
               title={column.title}
               cards={column.items}
+              onAddTask={() => addTask(columnId)}
             />
           ))}
         </div>

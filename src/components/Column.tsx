@@ -1,17 +1,30 @@
 import React from 'react';
 import { Droppable } from 'react-beautiful-dnd';
 import Card from './Card';
+import { Button } from './ui/button';
+import { Plus } from 'lucide-react';
 
 interface ColumnProps {
   id: string;
   title: string;
   cards: Array<{ id: string; content: string }>;
+  onAddTask: () => void;
 }
 
-const Column = ({ id, title, cards }: ColumnProps) => {
+const Column = ({ id, title, cards, onAddTask }: ColumnProps) => {
   return (
     <div className="w-72 mx-2 flex flex-col">
-      <h2 className="font-semibold mb-4 text-gray-700">{title}</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="font-semibold text-gray-700">{title}</h2>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={onAddTask}
+          className="hover:bg-gray-100"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
       <Droppable droppableId={id}>
         {(provided, snapshot) => (
           <div
