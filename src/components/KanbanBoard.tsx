@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
 import Column from './Column';
 import { Button } from './ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { useToast } from './ui/use-toast';
 import {
   Dialog,
@@ -19,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Badge } from "./ui/badge";
 
 interface TaskTag {
   id: string;
@@ -65,6 +66,11 @@ const initialData: KanbanData = {
   },
 };
 
+const predefinedTags = [
+  'frontend', 'backend', 'design', 'bug', 'feature', 'docs', 
+  'testing', 'urgent', 'planning', 'setup'
+];
+
 const KanbanBoard = () => {
   const [columns, setColumns] = useState<KanbanData>(initialData);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -72,7 +78,8 @@ const KanbanBoard = () => {
   const [activeColumn, setActiveColumn] = useState<string | null>(null);
   const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [newTaskDueDate, setNewTaskDueDate] = useState<Date>();
-  const [newTaskTags, setNewTaskTags] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [customTag, setCustomTag] = useState('');
   const { toast } = useToast();
 
   const onDragEnd = (result: DropResult) => {
@@ -120,8 +127,24 @@ const KanbanBoard = () => {
     setNewTaskContent('');
     setNewTaskPriority('medium');
     setNewTaskDueDate(undefined);
-    setNewTaskTags('');
+    setSelectedTags([]);
+    setCustomTag('');
     setIsDialogOpen(true);
+  };
+
+  const handleTagClick = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
+  const handleAddCustomTag = () => {
+    if (customTag.trim() && !selectedTags.includes(customTag.trim())) {
+      setSelectedTags(prev => [...prev, customTag.trim()]);
+      setCustomTag('');
+    }
   };
 
   const handleAddTask = () => {
@@ -133,7 +156,7 @@ const KanbanBoard = () => {
         content: newTaskContent.trim(),
         priority: newTaskPriority,
         dueDate: newTaskDueDate,
-        tags: newTaskTags.split(',').map(tag => tag.trim()).filter(tag => tag !== '')
+        tags: selectedTags
       };
 
       setColumns({
@@ -148,7 +171,8 @@ const KanbanBoard = () => {
       setNewTaskContent('');
       setNewTaskPriority('medium');
       setNewTaskDueDate(undefined);
-      setNewTaskTags('');
+      setSelectedTags([]);
+      setCustomTag('');
       setActiveColumn(null);
 
       toast({
@@ -230,7 +254,7 @@ const KanbanBoard = () => {
                     {newTaskDueDate ? format(newTaskDueDate, "PPP") : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
                     selected={newTaskDueDate}
@@ -242,13 +266,59 @@ const KanbanBoard = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tags">Tags (comma-separated)</Label>
-              <Input
-                id="tags"
-                placeholder="e.g. frontend, urgent, bug"
-                value={newTaskTags}
-                onChange={(e) => setNewTaskTags(e.target.value)}
-              />
+              <Label>Tags</Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {predefinedTags.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant={selectedTags.includes(tag) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => handleTagClick(tag)}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add custom tag"
+                  value={customTag}
+                  onChange={(e) => setCustomTag(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddCustomTag();
+                    }
+                  }}
+                />
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={handleAddCustomTag}
+                >
+                  Add
+                </Button>
+              </div>
+              {selectedTags.length > 0 && (
+                <div className="mt-2">
+                  <Label>Selected Tags:</Label>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {selectedTags.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="default"
+                        className="cursor-pointer"
+                      >
+                        {tag}
+                        <X
+                          className="ml-1 h-3 w-3"
+                          onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))}
+                        />
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>
