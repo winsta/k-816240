@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
-import { supabase } from '@/lib/supabase';
 import Column from './Column';
 import { Button } from './ui/button';
 import { Plus, X, CalendarIcon } from 'lucide-react';
@@ -20,12 +19,19 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
-import type { Task } from '@/types/supabase';
 
-const predefinedTags = [
-  'frontend', 'backend', 'design', 'bug', 'feature', 'docs', 
-  'testing', 'urgent', 'planning', 'setup'
-];
+interface TaskTag {
+  id: string;
+  name: string;
+}
+
+interface Task {
+  id: string;
+  content: string;
+  priority: 'low' | 'medium' | 'high';
+  dueDate?: Date;
+  tags: string[];
+}
 
 interface KanbanData {
   [key: string]: {
@@ -34,12 +40,38 @@ interface KanbanData {
   };
 }
 
+const initialData: KanbanData = {
+  todo: {
+    title: 'To Do',
+    items: [
+      { id: 'task-1', content: 'Create project documentation', priority: 'medium', tags: ['docs'] },
+      { id: 'task-2', content: 'Design user interface', priority: 'high', tags: ['design'] },
+      { id: 'task-3', content: 'Implement authentication', priority: 'high', tags: ['backend'] },
+    ],
+  },
+  inProgress: {
+    title: 'In Progress',
+    items: [
+      { id: 'task-4', content: 'Develop API endpoints', priority: 'medium', tags: ['backend'] },
+      { id: 'task-5', content: 'Write unit tests', priority: 'low', tags: ['testing'] },
+    ],
+  },
+  done: {
+    title: 'Done',
+    items: [
+      { id: 'task-6', content: 'Project setup', priority: 'high', tags: ['setup'] },
+      { id: 'task-7', content: 'Initial planning', priority: 'medium', tags: ['planning'] },
+    ],
+  },
+};
+
+const predefinedTags = [
+  'frontend', 'backend', 'design', 'bug', 'feature', 'docs', 
+  'testing', 'urgent', 'planning', 'setup'
+];
+
 const KanbanBoard = () => {
-  const [columns, setColumns] = useState<KanbanData>({
-    todo: { title: 'To Do', items: [] },
-    inProgress: { title: 'In Progress', items: [] },
-    done: { title: 'Done', items: [] },
-  });
+  const [columns, setColumns] = useState<KanbanData>(initialData);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newTaskContent, setNewTaskContent] = useState('');
   const [activeColumn, setActiveColumn] = useState<string | null>(null);
@@ -50,66 +82,25 @@ const KanbanBoard = () => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchTasks();
-    
-    // Subscribe to real-time changes
-    const subscription = supabase
-      .channel('tasks')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, fetchTasks)
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const fetchTasks = async () => {
-    try {
-      const { data: tasks, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      const newColumns: KanbanData = {
-        todo: { title: 'To Do', items: [] },
-        inProgress: { title: 'In Progress', items: [] },
-        done: { title: 'Done', items: [] },
-      };
-
-      tasks.forEach((task: Task) => {
-        const column = task.status === 'inProgress' ? 'inProgress' : task.status;
-        newColumns[column].items.push(task);
-      });
-
-      setColumns(newColumns);
-    } catch (error) {
-      toast({
-        title: "Error fetching tasks",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const onDragEnd = async (result: DropResult) => {
+  const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
     const { source, destination } = result;
-    const taskId = result.draggableId;
-    const newStatus = destination.droppableId === 'inProgress' ? 'inProgress' : destination.droppableId as 'todo' | 'done';
 
-    try {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ status: newStatus })
-        .eq('id', taskId);
+    if (source.droppableId === destination.droppableId) {
+      const column = columns[source.droppableId];
+      const copiedItems = [...column.items];
+      const [removed] = copiedItems.splice(source.index, 1);
+      copiedItems.splice(destination.index, 0, removed);
 
-      if (error) throw error;
-
-      // Optimistically update the UI
+      setColumns({
+        ...columns,
+        [source.droppableId]: {
+          ...column,
+          items: copiedItems,
+        },
+      });
+    } else {
       const sourceColumn = columns[source.droppableId];
       const destColumn = columns[destination.droppableId];
       const sourceItems = [...sourceColumn.items];
@@ -127,12 +118,6 @@ const KanbanBoard = () => {
           ...destColumn,
           items: destItems,
         },
-      });
-    } catch (error) {
-      toast({
-        title: "Error updating task",
-        description: error.message,
-        variant: "destructive",
       });
     }
   };
@@ -162,43 +147,39 @@ const KanbanBoard = () => {
     }
   };
 
-  const handleAddTask = async () => {
+  const handleAddTask = () => {
     if (activeColumn && newTaskContent.trim()) {
-      try {
-        const newTask = {
-          content: newTaskContent.trim(),
-          priority: newTaskPriority,
-          due_date: newTaskDueDate?.toISOString(),
-          tags: selectedTags,
-          status: activeColumn === 'inProgress' ? 'inProgress' : activeColumn as 'todo' | 'done',
-        };
+      const newTaskId = `task-${Date.now()}`;
+      const column = columns[activeColumn];
+      const newTask: Task = {
+        id: newTaskId,
+        content: newTaskContent.trim(),
+        priority: newTaskPriority,
+        dueDate: newTaskDueDate,
+        tags: selectedTags
+      };
 
-        const { error } = await supabase
-          .from('tasks')
-          .insert([newTask]);
+      setColumns({
+        ...columns,
+        [activeColumn]: {
+          ...column,
+          items: [...column.items, newTask]
+        }
+      });
 
-        if (error) throw error;
+      setIsDialogOpen(false);
+      setNewTaskContent('');
+      setNewTaskPriority('medium');
+      setNewTaskDueDate(undefined);
+      setSelectedTags([]);
+      setCustomTag('');
+      setActiveColumn(null);
+      setIsCalendarOpen(false);
 
-        setIsDialogOpen(false);
-        setNewTaskContent('');
-        setNewTaskPriority('medium');
-        setNewTaskDueDate(undefined);
-        setSelectedTags([]);
-        setCustomTag('');
-        setActiveColumn(null);
-        setIsCalendarOpen(false);
-
-        toast({
-          title: "Task added",
-          description: "New task has been added to the column",
-        });
-      } catch (error) {
-        toast({
-          title: "Error adding task",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Task added",
+        description: "New task has been added to the column",
+      });
     }
   };
 
