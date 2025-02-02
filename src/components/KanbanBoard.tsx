@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
 import Column from './Column';
 import { Button } from './ui/button';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, CalendarIcon } from 'lucide-react';
 import { useToast } from './ui/use-toast';
 import {
   Dialog,
@@ -16,7 +16,6 @@ import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Label } from "./ui/label";
 import { Calendar } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
@@ -80,6 +79,7 @@ const KanbanBoard = () => {
   const [newTaskDueDate, setNewTaskDueDate] = useState<Date>();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState('');
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const { toast } = useToast();
 
   const onDragEnd = (result: DropResult) => {
@@ -174,6 +174,7 @@ const KanbanBoard = () => {
       setSelectedTags([]);
       setCustomTag('');
       setActiveColumn(null);
+      setIsCalendarOpen(false);
 
       toast({
         title: "Task added",
@@ -241,7 +242,7 @@ const KanbanBoard = () => {
 
             <div className="space-y-2">
               <Label>Due Date</Label>
-              <Popover>
+              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -258,7 +259,10 @@ const KanbanBoard = () => {
                   <Calendar
                     mode="single"
                     selected={newTaskDueDate}
-                    onSelect={setNewTaskDueDate}
+                    onSelect={(date) => {
+                      setNewTaskDueDate(date);
+                      setIsCalendarOpen(false);
+                    }}
                     initialFocus
                   />
                 </PopoverContent>
