@@ -4,12 +4,19 @@ import Card from './Card';
 import { Button } from './ui/button';
 import { Plus } from 'lucide-react';
 
+interface Subtask {
+  id: string;
+  content: string;
+  completed: boolean;
+}
+
 interface Task {
   id: string;
   content: string;
   priority: 'low' | 'medium' | 'high';
   dueDate?: Date;
   tags: string[];
+  subtasks: Subtask[];
 }
 
 interface ColumnProps {
@@ -17,9 +24,11 @@ interface ColumnProps {
   title: string;
   cards: Task[];
   onAddTask: () => void;
+  onAddSubtask: (taskId: string) => void;
+  onToggleSubtask: (taskId: string, subtaskId: string) => void;
 }
 
-const Column = ({ id, title, cards, onAddTask }: ColumnProps) => {
+const Column = ({ id, title, cards, onAddTask, onAddSubtask, onToggleSubtask }: ColumnProps) => {
   return (
     <div className="w-72 mx-2 flex flex-col">
       <div className="flex justify-between items-center mb-4">
@@ -51,6 +60,9 @@ const Column = ({ id, title, cards, onAddTask }: ColumnProps) => {
                 priority={card.priority}
                 dueDate={card.dueDate}
                 tags={card.tags}
+                subtasks={card.subtasks}
+                onAddSubtask={onAddSubtask}
+                onToggleSubtask={onToggleSubtask}
               />
             ))}
             {provided.placeholder}

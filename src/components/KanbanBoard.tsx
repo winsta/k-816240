@@ -20,9 +20,10 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 
-interface TaskTag {
+interface Subtask {
   id: string;
-  name: string;
+  content: string;
+  completed: boolean;
 }
 
 interface Task {
@@ -31,6 +32,7 @@ interface Task {
   priority: 'low' | 'medium' | 'high';
   dueDate?: Date;
   tags: string[];
+  subtasks: Subtask[];
 }
 
 interface KanbanData {
@@ -44,23 +46,65 @@ const initialData: KanbanData = {
   todo: {
     title: 'To Do',
     items: [
-      { id: 'task-1', content: 'Create project documentation', priority: 'medium', tags: ['docs'] },
-      { id: 'task-2', content: 'Design user interface', priority: 'high', tags: ['design'] },
-      { id: 'task-3', content: 'Implement authentication', priority: 'high', tags: ['backend'] },
+      { 
+        id: 'task-1', 
+        content: 'Create project documentation', 
+        priority: 'medium', 
+        tags: ['docs'],
+        subtasks: []
+      },
+      { 
+        id: 'task-2', 
+        content: 'Design user interface', 
+        priority: 'high', 
+        tags: ['design'],
+        subtasks: []
+      },
+      { 
+        id: 'task-3', 
+        content: 'Implement authentication', 
+        priority: 'high', 
+        tags: ['backend'],
+        subtasks: []
+      },
     ],
   },
   inProgress: {
     title: 'In Progress',
     items: [
-      { id: 'task-4', content: 'Develop API endpoints', priority: 'medium', tags: ['backend'] },
-      { id: 'task-5', content: 'Write unit tests', priority: 'low', tags: ['testing'] },
+      { 
+        id: 'task-4', 
+        content: 'Develop API endpoints', 
+        priority: 'medium', 
+        tags: ['backend'],
+        subtasks: []
+      },
+      { 
+        id: 'task-5', 
+        content: 'Write unit tests', 
+        priority: 'low', 
+        tags: ['testing'],
+        subtasks: []
+      },
     ],
   },
   done: {
     title: 'Done',
     items: [
-      { id: 'task-6', content: 'Project setup', priority: 'high', tags: ['setup'] },
-      { id: 'task-7', content: 'Initial planning', priority: 'medium', tags: ['planning'] },
+      { 
+        id: 'task-6', 
+        content: 'Project setup', 
+        priority: 'high', 
+        tags: ['setup'],
+        subtasks: []
+      },
+      { 
+        id: 'task-7', 
+        content: 'Initial planning', 
+        priority: 'medium', 
+        tags: ['planning'],
+        subtasks: []
+      },
     ],
   },
 };
@@ -73,8 +117,11 @@ const predefinedTags = [
 const KanbanBoard = () => {
   const [columns, setColumns] = useState<KanbanData>(initialData);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSubtaskDialogOpen, setIsSubtaskDialogOpen] = useState(false);
   const [newTaskContent, setNewTaskContent] = useState('');
+  const [newSubtaskContent, setNewSubtaskContent] = useState('');
   const [activeColumn, setActiveColumn] = useState<string | null>(null);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [newTaskDueDate, setNewTaskDueDate] = useState<Date>();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -130,6 +177,60 @@ const KanbanBoard = () => {
     setSelectedTags([]);
     setCustomTag('');
     setIsDialogOpen(true);
+  };
+
+  const handleAddSubtask = (taskId: string) => {
+    setActiveTaskId(taskId);
+    setNewSubtaskContent('');
+    setIsSubtaskDialogOpen(true);
+  };
+
+  const handleSubtaskSubmit = () => {
+    if (activeTaskId && newSubtaskContent.trim()) {
+      setColumns(prevColumns => {
+        const newColumns = { ...prevColumns };
+        Object.keys(newColumns).forEach(columnId => {
+          const taskIndex = newColumns[columnId].items.findIndex(task => task.id === activeTaskId);
+          if (taskIndex !== -1) {
+            const newSubtask: Subtask = {
+              id: `subtask-${Date.now()}`,
+              content: newSubtaskContent.trim(),
+              completed: false
+            };
+            newColumns[columnId].items[taskIndex].subtasks.push(newSubtask);
+          }
+        });
+        return newColumns;
+      });
+
+      setIsSubtaskDialogOpen(false);
+      setNewSubtaskContent('');
+      setActiveTaskId(null);
+
+      toast({
+        title: "Subtask added",
+        description: "New subtask has been added to the task",
+      });
+    }
+  };
+
+  const handleToggleSubtask = (taskId: string, subtaskId: string) => {
+    setColumns(prevColumns => {
+      const newColumns = { ...prevColumns };
+      Object.keys(newColumns).forEach(columnId => {
+        const taskIndex = newColumns[columnId].items.findIndex(task => task.id === taskId);
+        if (taskIndex !== -1) {
+          const subtaskIndex = newColumns[columnId].items[taskIndex].subtasks.findIndex(
+            subtask => subtask.id === subtaskId
+          );
+          if (subtaskIndex !== -1) {
+            newColumns[columnId].items[taskIndex].subtasks[subtaskIndex].completed =
+              !newColumns[columnId].items[taskIndex].subtasks[subtaskIndex].completed;
+          }
+        }
+      });
+      return newColumns;
+    });
   };
 
   const handleTagClick = (tag: string) => {
@@ -196,6 +297,8 @@ const KanbanBoard = () => {
                 title={column.title}
                 cards={column.items}
                 onAddTask={() => addTask(columnId)}
+                onAddSubtask={handleAddSubtask}
+                onToggleSubtask={handleToggleSubtask}
               />
             ))}
           </div>
@@ -330,6 +433,31 @@ const KanbanBoard = () => {
               Cancel
             </Button>
             <Button onClick={handleAddTask}>Add Task</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isSubtaskDialogOpen} onOpenChange={setIsSubtaskDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add Subtask</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="subtask">Subtask Description</Label>
+              <Input
+                id="subtask"
+                placeholder="Enter subtask description"
+                value={newSubtaskContent}
+                onChange={(e) => setNewSubtaskContent(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSubtaskDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubtaskSubmit}>Add Subtask</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
