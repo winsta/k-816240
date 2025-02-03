@@ -16,7 +16,7 @@ import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Label } from "./ui/label";
 import { Calendar } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 
@@ -215,11 +215,15 @@ const KanbanBoard = () => {
     if (activeColumn && newTaskContent.trim()) {
       const newTaskId = `task-${Date.now()}`;
       const column = columns[activeColumn];
+      
+      // Ensure the date is set to end of day for due dates
+      const adjustedDueDate = newTaskDueDate ? new Date(newTaskDueDate.setHours(23, 59, 59, 999)) : undefined;
+      
       const newTask: Task = {
         id: newTaskId,
         content: newTaskContent.trim(),
         priority: newTaskPriority,
-        dueDate: newTaskDueDate,
+        dueDate: adjustedDueDate,
         tags: selectedTags,
         subtasks: newSubtasks.filter(st => st.trim()).map(content => ({
           id: `subtask-${Date.now()}-${Math.random()}`,
@@ -447,10 +451,17 @@ const KanbanBoard = () => {
                     mode="single"
                     selected={newTaskDueDate}
                     onSelect={(date) => {
-                      setNewTaskDueDate(date);
+                      if (date) {
+                        // Set time to end of day for due dates
+                        const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+                        setNewTaskDueDate(endOfDay);
+                      } else {
+                        setNewTaskDueDate(undefined);
+                      }
                       setIsCalendarOpen(false);
                     }}
                     initialFocus
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                   />
                 </PopoverContent>
               </Popover>
