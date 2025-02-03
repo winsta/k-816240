@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
 import Column from './Column';
 import { Button } from './ui/button';
-import { Plus, X, CalendarIcon } from 'lucide-react';
+import { Plus, X, CalendarIcon, ListPlus } from 'lucide-react';
 import { useToast } from './ui/use-toast';
 import {
   Dialog,
@@ -33,6 +33,8 @@ interface Task {
   dueDate?: Date;
   tags: string[];
   subtasks: Subtask[];
+  clientName: string;
+  projectName: string;
 }
 
 interface KanbanData {
@@ -51,21 +53,27 @@ const initialData: KanbanData = {
         content: 'Create project documentation', 
         priority: 'medium', 
         tags: ['docs'],
-        subtasks: []
+        subtasks: [],
+        clientName: 'ACME Corp',
+        projectName: 'Documentation Portal'
       },
       { 
         id: 'task-2', 
         content: 'Design user interface', 
         priority: 'high', 
         tags: ['design'],
-        subtasks: []
+        subtasks: [],
+        clientName: 'ACME Corp',
+        projectName: 'UI Design'
       },
       { 
         id: 'task-3', 
         content: 'Implement authentication', 
         priority: 'high', 
         tags: ['backend'],
-        subtasks: []
+        subtasks: [],
+        clientName: 'ACME Corp',
+        projectName: 'Auth Module'
       },
     ],
   },
@@ -77,14 +85,18 @@ const initialData: KanbanData = {
         content: 'Develop API endpoints', 
         priority: 'medium', 
         tags: ['backend'],
-        subtasks: []
+        subtasks: [],
+        clientName: 'ACME Corp',
+        projectName: 'API Development'
       },
       { 
         id: 'task-5', 
         content: 'Write unit tests', 
         priority: 'low', 
         tags: ['testing'],
-        subtasks: []
+        subtasks: [],
+        clientName: 'ACME Corp',
+        projectName: 'Testing Suite'
       },
     ],
   },
@@ -96,14 +108,18 @@ const initialData: KanbanData = {
         content: 'Project setup', 
         priority: 'high', 
         tags: ['setup'],
-        subtasks: []
+        subtasks: [],
+        clientName: 'ACME Corp',
+        projectName: 'Initial Setup'
       },
       { 
         id: 'task-7', 
         content: 'Initial planning', 
         priority: 'medium', 
         tags: ['planning'],
-        subtasks: []
+        subtasks: [],
+        clientName: 'ACME Corp',
+        projectName: 'Planning Phase'
       },
     ],
   },
@@ -117,16 +133,15 @@ const predefinedTags = [
 const KanbanBoard = () => {
   const [columns, setColumns] = useState<KanbanData>(initialData);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isSubtaskDialogOpen, setIsSubtaskDialogOpen] = useState(false);
   const [newTaskContent, setNewTaskContent] = useState('');
-  const [newSubtaskContent, setNewSubtaskContent] = useState('');
-  const [activeColumn, setActiveColumn] = useState<string | null>(null);
-  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [newTaskDueDate, setNewTaskDueDate] = useState<Date>();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState('');
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [clientName, setClientName] = useState('');
+  const [projectName, setProjectName] = useState('');
+  const [newSubtasks, setNewSubtasks] = useState<string[]>([]);
   const { toast } = useToast();
 
   const onDragEnd = (result: DropResult) => {
@@ -176,76 +191,20 @@ const KanbanBoard = () => {
     setNewTaskDueDate(undefined);
     setSelectedTags([]);
     setCustomTag('');
+    setClientName('');
+    setProjectName('');
+    setNewSubtasks([]);
     setIsDialogOpen(true);
   };
 
-  const handleAddSubtask = (taskId: string) => {
-    setActiveTaskId(taskId);
-    setNewSubtaskContent('');
-    setIsSubtaskDialogOpen(true);
+  const handleAddSubtaskField = () => {
+    setNewSubtasks([...newSubtasks, '']);
   };
 
-  const handleSubtaskSubmit = () => {
-    if (activeTaskId && newSubtaskContent.trim()) {
-      setColumns(prevColumns => {
-        const newColumns = { ...prevColumns };
-        Object.keys(newColumns).forEach(columnId => {
-          const taskIndex = newColumns[columnId].items.findIndex(task => task.id === activeTaskId);
-          if (taskIndex !== -1) {
-            const newSubtask: Subtask = {
-              id: `subtask-${Date.now()}`,
-              content: newSubtaskContent.trim(),
-              completed: false
-            };
-            newColumns[columnId].items[taskIndex].subtasks.push(newSubtask);
-          }
-        });
-        return newColumns;
-      });
-
-      setIsSubtaskDialogOpen(false);
-      setNewSubtaskContent('');
-      setActiveTaskId(null);
-
-      toast({
-        title: "Subtask added",
-        description: "New subtask has been added to the task",
-      });
-    }
-  };
-
-  const handleToggleSubtask = (taskId: string, subtaskId: string) => {
-    setColumns(prevColumns => {
-      const newColumns = { ...prevColumns };
-      Object.keys(newColumns).forEach(columnId => {
-        const taskIndex = newColumns[columnId].items.findIndex(task => task.id === taskId);
-        if (taskIndex !== -1) {
-          const subtaskIndex = newColumns[columnId].items[taskIndex].subtasks.findIndex(
-            subtask => subtask.id === subtaskId
-          );
-          if (subtaskIndex !== -1) {
-            newColumns[columnId].items[taskIndex].subtasks[subtaskIndex].completed =
-              !newColumns[columnId].items[taskIndex].subtasks[subtaskIndex].completed;
-          }
-        }
-      });
-      return newColumns;
-    });
-  };
-
-  const handleTagClick = (tag: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tag) 
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
-    );
-  };
-
-  const handleAddCustomTag = () => {
-    if (customTag.trim() && !selectedTags.includes(customTag.trim())) {
-      setSelectedTags(prev => [...prev, customTag.trim()]);
-      setCustomTag('');
-    }
+  const handleSubtaskChange = (index: number, value: string) => {
+    const updatedSubtasks = [...newSubtasks];
+    updatedSubtasks[index] = value;
+    setNewSubtasks(updatedSubtasks);
   };
 
   const handleAddTask = () => {
@@ -258,7 +217,13 @@ const KanbanBoard = () => {
         priority: newTaskPriority,
         dueDate: newTaskDueDate,
         tags: selectedTags,
-        subtasks: [] // Initialize empty subtasks array
+        subtasks: newSubtasks.filter(st => st.trim()).map(content => ({
+          id: `subtask-${Date.now()}-${Math.random()}`,
+          content,
+          completed: false
+        })),
+        clientName: clientName.trim(),
+        projectName: projectName.trim()
       };
 
       setColumns({
@@ -277,6 +242,9 @@ const KanbanBoard = () => {
       setCustomTag('');
       setActiveColumn(null);
       setIsCalendarOpen(false);
+      setClientName('');
+      setProjectName('');
+      setNewSubtasks([]);
 
       toast({
         title: "Task added",
@@ -312,6 +280,26 @@ const KanbanBoard = () => {
             <DialogTitle>Add New Task</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="clientName">Client Name</Label>
+              <Input
+                id="clientName"
+                placeholder="Enter client name"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="projectName">Project Name</Label>
+              <Input
+                id="projectName"
+                placeholder="Enter project name"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="task">Task Description</Label>
               <Input
@@ -371,6 +359,42 @@ const KanbanBoard = () => {
                   />
                 </PopoverContent>
               </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Subtasks</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddSubtaskField}
+                  className="flex items-center gap-1"
+                >
+                  <ListPlus className="h-4 w-4" />
+                  Add Subtask
+                </Button>
+              </div>
+              {newSubtasks.map((subtask, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    placeholder="Enter subtask"
+                    value={subtask}
+                    onChange={(e) => handleSubtaskChange(index, e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      const updated = newSubtasks.filter((_, i) => i !== index);
+                      setNewSubtasks(updated);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
 
             <div className="space-y-2">

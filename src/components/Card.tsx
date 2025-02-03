@@ -20,6 +20,8 @@ interface CardProps {
   dueDate?: Date;
   tags: string[];
   subtasks: Subtask[];
+  clientName: string;
+  projectName: string;
   onAddSubtask: (taskId: string) => void;
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
 }
@@ -32,6 +34,8 @@ const Card = ({
   dueDate, 
   tags, 
   subtasks,
+  clientName,
+  projectName,
   onAddSubtask,
   onToggleSubtask 
 }: CardProps) => {
@@ -46,6 +50,16 @@ const Card = ({
             snapshot.isDragging ? 'shadow-lg' : ''
           }`}
         >
+          {clientName && (
+            <div className="text-xs text-gray-500">
+              Client: {clientName}
+            </div>
+          )}
+          {projectName && (
+            <div className="text-xs text-gray-500">
+              Project: {projectName}
+            </div>
+          )}
           <p className="text-sm text-gray-700 cursor-default">{content}</p>
           
           <div className="flex items-center gap-2">
