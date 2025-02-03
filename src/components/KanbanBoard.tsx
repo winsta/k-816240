@@ -146,6 +146,7 @@ const KanbanBoard = () => {
   const [newSubtaskContent, setNewSubtaskContent] = useState('');
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const { toast } = useToast();
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -428,7 +429,7 @@ const KanbanBoard = () => {
 
             <div className="space-y-2">
               <Label>Due Date</Label>
-              <Popover>
+              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -447,6 +448,7 @@ const KanbanBoard = () => {
                     selected={newTaskDueDate}
                     onSelect={(date) => {
                       setNewTaskDueDate(date);
+                      setIsCalendarOpen(false);
                     }}
                     initialFocus
                   />
