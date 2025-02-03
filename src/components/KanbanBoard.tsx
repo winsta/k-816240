@@ -138,7 +138,6 @@ const KanbanBoard = () => {
   const [newTaskDueDate, setNewTaskDueDate] = useState<Date>();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState('');
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [clientName, setClientName] = useState('');
   const [projectName, setProjectName] = useState('');
   const [newSubtasks, setNewSubtasks] = useState<string[]>([]);
@@ -245,7 +244,6 @@ const KanbanBoard = () => {
       setSelectedTags([]);
       setCustomTag('');
       setActiveColumn(null);
-      setIsCalendarOpen(false);
       setClientName('');
       setProjectName('');
       setNewSubtasks([]);
@@ -430,7 +428,7 @@ const KanbanBoard = () => {
 
             <div className="space-y-2">
               <Label>Due Date</Label>
-              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+              <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -449,7 +447,6 @@ const KanbanBoard = () => {
                     selected={newTaskDueDate}
                     onSelect={(date) => {
                       setNewTaskDueDate(date);
-                      setIsCalendarOpen(false);
                     }}
                     initialFocus
                   />
