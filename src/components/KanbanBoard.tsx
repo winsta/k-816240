@@ -142,6 +142,10 @@ const KanbanBoard = () => {
   const [clientName, setClientName] = useState('');
   const [projectName, setProjectName] = useState('');
   const [newSubtasks, setNewSubtasks] = useState<string[]>([]);
+  const [activeColumn, setActiveColumn] = useState<string | null>(null);
+  const [isSubtaskDialogOpen, setIsSubtaskDialogOpen] = useState(false);
+  const [newSubtaskContent, setNewSubtaskContent] = useState('');
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const onDragEnd = (result: DropResult) => {
@@ -249,6 +253,98 @@ const KanbanBoard = () => {
       toast({
         title: "Task added",
         description: "New task has been added to the column",
+      });
+    }
+  };
+
+  const handleTagClick = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
+  const handleAddCustomTag = () => {
+    if (customTag.trim() && !selectedTags.includes(customTag.trim())) {
+      setSelectedTags(prev => [...prev, customTag.trim()]);
+      setCustomTag('');
+    }
+  };
+
+  const handleAddSubtask = (taskId: string) => {
+    setActiveTaskId(taskId);
+    setNewSubtaskContent('');
+    setIsSubtaskDialogOpen(true);
+  };
+
+  const handleToggleSubtask = (taskId: string, subtaskId: string) => {
+    setColumns(prevColumns => {
+      const newColumns = { ...prevColumns };
+      
+      for (const columnId in newColumns) {
+        const column = newColumns[columnId];
+        const taskIndex = column.items.findIndex(task => task.id === taskId);
+        
+        if (taskIndex !== -1) {
+          const task = column.items[taskIndex];
+          const subtaskIndex = task.subtasks.findIndex(st => st.id === subtaskId);
+          
+          if (subtaskIndex !== -1) {
+            const updatedSubtasks = [...task.subtasks];
+            updatedSubtasks[subtaskIndex] = {
+              ...updatedSubtasks[subtaskIndex],
+              completed: !updatedSubtasks[subtaskIndex].completed
+            };
+            
+            column.items[taskIndex] = {
+              ...task,
+              subtasks: updatedSubtasks
+            };
+          }
+          break;
+        }
+      }
+      
+      return newColumns;
+    });
+  };
+
+  const handleSubtaskSubmit = () => {
+    if (activeTaskId && newSubtaskContent.trim()) {
+      setColumns(prevColumns => {
+        const newColumns = { ...prevColumns };
+        
+        for (const columnId in newColumns) {
+          const column = newColumns[columnId];
+          const taskIndex = column.items.findIndex(task => task.id === activeTaskId);
+          
+          if (taskIndex !== -1) {
+            const task = column.items[taskIndex];
+            const newSubtask = {
+              id: `subtask-${Date.now()}-${Math.random()}`,
+              content: newSubtaskContent.trim(),
+              completed: false
+            };
+            
+            column.items[taskIndex] = {
+              ...task,
+              subtasks: [...task.subtasks, newSubtask]
+            };
+            break;
+          }
+        }
+        
+        return newColumns;
+      });
+
+      setIsSubtaskDialogOpen(false);
+      setNewSubtaskContent('');
+      setActiveTaskId(null);
+
+      toast({
+        title: "Subtask added",
+        description: "New subtask has been added to the task",
       });
     }
   };

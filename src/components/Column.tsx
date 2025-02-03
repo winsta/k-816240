@@ -17,6 +17,8 @@ interface Task {
   dueDate?: Date;
   tags: string[];
   subtasks: Subtask[];
+  clientName: string;
+  projectName: string;
 }
 
 interface ColumnProps {
@@ -61,6 +63,8 @@ const Column = ({ id, title, cards, onAddTask, onAddSubtask, onToggleSubtask }: 
                 dueDate={card.dueDate}
                 tags={card.tags}
                 subtasks={card.subtasks}
+                clientName={card.clientName}
+                projectName={card.projectName}
                 onAddSubtask={onAddSubtask}
                 onToggleSubtask={onToggleSubtask}
               />
