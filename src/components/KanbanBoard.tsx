@@ -257,7 +257,8 @@ const KanbanBoard = () => {
         content: newTaskContent.trim(),
         priority: newTaskPriority,
         dueDate: newTaskDueDate,
-        tags: selectedTags
+        tags: selectedTags,
+        subtasks: [] // Initialize empty subtasks array
       };
 
       setColumns({
