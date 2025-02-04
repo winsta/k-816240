@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
 import Column from './Column';
 import { Button } from './ui/button';
-import { Plus, X, CalendarIcon, ListPlus } from 'lucide-react';
+import { Plus, X, CalendarIcon, ListPlus, Upload } from 'lucide-react';
 import { useToast } from './ui/use-toast';
 import {
   Dialog,
@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
@@ -19,6 +20,18 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
+import { Textarea } from "./ui/textarea";
+
+interface TeamMember {
+  id: string;
+  name: string;
+}
+
+interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+}
 
 interface Subtask {
   id: string;
@@ -35,8 +48,14 @@ interface Task {
   subtasks: Subtask[];
   clientName: string;
   projectName: string;
-  parentId?: string; // Added for hierarchy
-  isExpanded?: boolean; // Added for expanding/collapsing
+  parentId?: string;
+  isExpanded?: boolean;
+  totalCost?: number;
+  expenses?: Expense[];
+  assignedTeam?: TeamMember[];
+  status: 'not-started' | 'in-progress' | 'completed';
+  attachments?: string[];
+  notes?: string;
 }
 
 interface KanbanData {
@@ -57,7 +76,8 @@ const initialData: KanbanData = {
         tags: ['docs'],
         subtasks: [],
         clientName: 'ACME Corp',
-        projectName: 'Documentation Portal'
+        projectName: 'Documentation Portal',
+        status: 'not-started'
       },
       { 
         id: 'task-2', 
@@ -66,7 +86,8 @@ const initialData: KanbanData = {
         tags: ['design'],
         subtasks: [],
         clientName: 'ACME Corp',
-        projectName: 'UI Design'
+        projectName: 'UI Design',
+        status: 'not-started'
       },
       { 
         id: 'task-3', 
@@ -75,7 +96,8 @@ const initialData: KanbanData = {
         tags: ['backend'],
         subtasks: [],
         clientName: 'ACME Corp',
-        projectName: 'Auth Module'
+        projectName: 'Auth Module',
+        status: 'not-started'
       },
     ],
   },
@@ -89,7 +111,8 @@ const initialData: KanbanData = {
         tags: ['backend'],
         subtasks: [],
         clientName: 'ACME Corp',
-        projectName: 'API Development'
+        projectName: 'API Development',
+        status: 'in-progress'
       },
       { 
         id: 'task-5', 
@@ -98,7 +121,8 @@ const initialData: KanbanData = {
         tags: ['testing'],
         subtasks: [],
         clientName: 'ACME Corp',
-        projectName: 'Testing Suite'
+        projectName: 'Testing Suite',
+        status: 'in-progress'
       },
     ],
   },
@@ -112,7 +136,8 @@ const initialData: KanbanData = {
         tags: ['setup'],
         subtasks: [],
         clientName: 'ACME Corp',
-        projectName: 'Initial Setup'
+        projectName: 'Initial Setup',
+        status: 'completed'
       },
       { 
         id: 'task-7', 
@@ -121,7 +146,8 @@ const initialData: KanbanData = {
         tags: ['planning'],
         subtasks: [],
         clientName: 'ACME Corp',
-        projectName: 'Planning Phase'
+        projectName: 'Planning Phase',
+        status: 'completed'
       },
     ],
   },
@@ -147,6 +173,14 @@ const KanbanBoard = () => {
   const [isSubtaskDialogOpen, setIsSubtaskDialogOpen] = useState(false);
   const [newSubtaskContent, setNewSubtaskContent] = useState('');
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [totalCost, setTotalCost] = useState<string>('');
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [assignedTeam, setAssignedTeam] = useState<TeamMember[]>([]);
+  const [status, setStatus] = useState<'not-started' | 'in-progress' | 'completed'>('not-started');
+  const [notes, setNotes] = useState('');
+  const [newTeamMember, setNewTeamMember] = useState('');
+  const [newExpenseDescription, setNewExpenseDescription] = useState('');
+  const [newExpenseAmount, setNewExpenseAmount] = useState('');
   const { toast } = useToast();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -221,7 +255,6 @@ const KanbanBoard = () => {
     const newTaskId = `task-${Date.now()}`;
     const column = columns[activeColumn];
     
-    // Ensure the date is set to end of day for due dates
     const adjustedDueDate = newTaskDueDate ? new Date(newTaskDueDate.setHours(23, 59, 59, 999)) : undefined;
     
     const newTask: Task = {
@@ -236,7 +269,13 @@ const KanbanBoard = () => {
         completed: false
       })),
       clientName: clientName.trim(),
-      projectName: projectName.trim()
+      projectName: projectName.trim(),
+      totalCost: parseFloat(totalCost) || 0,
+      expenses: expenses,
+      assignedTeam: assignedTeam,
+      status: status,
+      notes: notes.trim(),
+      attachments: []
     };
 
     setColumns(prevColumns => ({
@@ -311,7 +350,7 @@ const KanbanBoard = () => {
 
   const handleEditTask = (columnId: string, taskId: string) => {
     const column = columns[columnId];
-    if (!column) return; // Early return if column not found
+    if (!column) return;
     
     const task = column.items.find(item => item.id === taskId);
     if (task) {
@@ -373,6 +412,33 @@ const KanbanBoard = () => {
     setClientName('');
     setProjectName('');
     setNewSubtasks([]);
+    setTotalCost('');
+    setExpenses([]);
+    setAssignedTeam([]);
+    setStatus('not-started');
+    setNotes('');
+  };
+
+  const handleAddTeamMember = () => {
+    if (newTeamMember.trim()) {
+      setAssignedTeam([...assignedTeam, {
+        id: `member-${Date.now()}`,
+        name: newTeamMember.trim()
+      }]);
+      setNewTeamMember('');
+    }
+  };
+
+  const handleAddExpense = () => {
+    if (newExpenseDescription.trim() && newExpenseAmount) {
+      setExpenses([...expenses, {
+        id: `expense-${Date.now()}`,
+        description: newExpenseDescription.trim(),
+        amount: parseFloat(newExpenseAmount)
+      }]);
+      setNewExpenseDescription('');
+      setNewExpenseAmount('');
+    }
   };
 
   const handleSubtaskSubmit = () => {
@@ -446,11 +512,11 @@ const KanbanBoard = () => {
         </div>
       </DragDropContext>
 
-      {/* Add Task Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Task</DialogTitle>
+            <DialogDescription>Fill in the project details below.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
@@ -481,6 +547,28 @@ const KanbanBoard = () => {
                 value={newTaskContent}
                 onChange={(e) => setNewTaskContent(e.target.value)}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Project Status</Label>
+              <RadioGroup
+                value={status}
+                onValueChange={(value: 'not-started' | 'in-progress' | 'completed') => setStatus(value)}
+                className="flex space-x-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="not-started" id="not-started" />
+                  <Label htmlFor="not-started">Not Started</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="in-progress" id="in-progress" />
+                  <Label htmlFor="in-progress">In Progress</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="completed" id="completed" />
+                  <Label htmlFor="completed">Completed</Label>
+                </div>
+              </RadioGroup>
             </div>
             
             <div className="space-y-2">
@@ -537,6 +625,78 @@ const KanbanBoard = () => {
                   />
                 </PopoverContent>
               </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="totalCost">Project Total Cost</Label>
+              <Input
+                id="totalCost"
+                type="number"
+                placeholder="Enter total cost"
+                value={totalCost}
+                onChange={(e) => setTotalCost(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Project Expenses</Label>
+              <div className="flex gap-2 mb-2">
+                <Input
+                  placeholder="Expense description"
+                  value={newExpenseDescription}
+                  onChange={(e) => setNewExpenseDescription(e.target.value)}
+                />
+                <Input
+                  type="number"
+                  placeholder="Amount"
+                  value={newExpenseAmount}
+                  onChange={(e) => setNewExpenseAmount(e.target.value)}
+                />
+                <Button type="button" onClick={handleAddExpense}>Add</Button>
+              </div>
+              {expenses.map((expense) => (
+                <div key={expense.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                  <span>{expense.description}</span>
+                  <span>${expense.amount}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Team Members</Label>
+              <div className="flex gap-2 mb-2">
+                <Input
+                  placeholder="Enter team member name"
+                  value={newTeamMember}
+                  onChange={(e) => setNewTeamMember(e.target.value)}
+                />
+                <Button type="button" onClick={handleAddTeamMember}>Add</Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {assignedTeam.map((member) => (
+                  <Badge
+                    key={member.id}
+                    variant="secondary"
+                    className="flex items-center gap-1"
+                  >
+                    {member.name}
+                    <X
+                      className="h-3 w-3 cursor-pointer"
+                      onClick={() => setAssignedTeam(assignedTeam.filter(m => m.id !== member.id))}
+                    />
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Notes & Comments</Label>
+              <Textarea
+                placeholder="Add notes or comments"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="min-h-[100px]"
+              />
             </div>
 
             <div className="space-y-2">
@@ -609,7 +769,31 @@ const KanbanBoard = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Task Dialog */}
+      <Dialog open={isSubtaskDialogOpen} onOpenChange={setIsSubtaskDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add Subtask</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="subtask">Subtask Description</Label>
+              <Input
+                id="subtask"
+                placeholder="Enter subtask description"
+                value={newSubtaskContent}
+                onChange={(e) => setNewSubtaskContent(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSubtaskDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubtaskSubmit}>Add Subtask</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -767,32 +951,6 @@ const KanbanBoard = () => {
               Cancel
             </Button>
             <Button onClick={handleUpdateTask}>Update Task</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Subtask Dialog */}
-      <Dialog open={isSubtaskDialogOpen} onOpenChange={setIsSubtaskDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Add Subtask</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="subtask">Subtask Description</Label>
-              <Input
-                id="subtask"
-                placeholder="Enter subtask description"
-                value={newSubtaskContent}
-                onChange={(e) => setNewSubtaskContent(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSubtaskDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubtaskSubmit}>Add Subtask</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

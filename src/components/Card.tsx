@@ -3,8 +3,19 @@ import { Draggable } from 'react-beautiful-dnd';
 import { Badge } from './ui/badge';
 import { format, differenceInDays } from 'date-fns';
 import { Checkbox } from './ui/checkbox';
-import { ListPlus, AlertCircle, Edit, ChevronRight, ChevronDown } from 'lucide-react';
+import { ListPlus, AlertCircle, Edit, ChevronRight, ChevronDown, Users, Receipt } from 'lucide-react';
 import { Button } from './ui/button';
+
+interface TeamMember {
+  id: string;
+  name: string;
+}
+
+interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+}
 
 interface Subtask {
   id: string;
@@ -24,14 +35,17 @@ interface CardProps {
   projectName: string;
   isExpanded?: boolean;
   parentId?: string;
-  columnId: string; // Add columnId prop
+  columnId: string;
+  totalCost?: number;
+  expenses?: Expense[];
+  assignedTeam?: TeamMember[];
+  status: 'not-started' | 'in-progress' | 'completed';
+  notes?: string;
   onAddSubtask: (taskId: string) => void;
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
   onEditTask: (columnId: string, taskId: string) => void;
   onToggleExpand?: (taskId: string) => void;
 }
-
-// ... keep existing code (getRemainingDays and getDueDateStatus functions)
 
 const Card = ({ 
   id, 
@@ -46,6 +60,11 @@ const Card = ({
   isExpanded,
   parentId,
   columnId,
+  totalCost,
+  expenses,
+  assignedTeam,
+  status,
+  notes,
   onAddSubtask,
   onToggleSubtask,
   onEditTask,
@@ -68,6 +87,12 @@ const Card = ({
   };
 
   const dueDateStatus = getDueDateStatus();
+
+  const statusColors = {
+    'not-started': 'bg-gray-100 text-gray-800',
+    'in-progress': 'bg-blue-100 text-blue-800',
+    'completed': 'bg-green-100 text-green-800',
+  };
 
   return (
     <Draggable draggableId={id} index={index}>
@@ -120,9 +145,12 @@ const Card = ({
             </Button>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="secondary" className={priorityColors[priority]}>
               {priority}
+            </Badge>
+            <Badge variant="secondary" className={statusColors[status]}>
+              {status.replace('-', ' ')}
             </Badge>
             {dueDate && (
               <div className="flex items-center gap-2">
@@ -145,6 +173,28 @@ const Card = ({
             )}
           </div>
 
+          {totalCost !== undefined && (
+            <div className="flex items-center gap-2">
+              <Receipt className="h-4 w-4 text-gray-500" />
+              <span className="text-sm text-gray-600">
+                Total Cost: ${totalCost.toLocaleString()}
+              </span>
+            </div>
+          )}
+
+          {assignedTeam && assignedTeam.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-gray-500" />
+              <div className="flex flex-wrap gap-1">
+                {assignedTeam.map((member) => (
+                  <Badge key={member.id} variant="outline" className="text-xs">
+                    {member.name}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
           {tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {tags.map((tag, index) => (
@@ -152,6 +202,12 @@ const Card = ({
                   {tag}
                 </Badge>
               ))}
+            </div>
+          )}
+
+          {notes && (
+            <div className="text-sm text-gray-600 mt-2">
+              <p className="line-clamp-2">{notes}</p>
             </div>
           )}
 
