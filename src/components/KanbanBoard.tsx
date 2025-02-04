@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
 import Column from './Column';
 import { Button } from './ui/button';
-import { Plus, X, CalendarIcon, ListPlus, Upload } from 'lucide-react';
+import { Plus, X, CalendarIcon, ListPlus } from 'lucide-react';
 import { useToast } from './ui/use-toast';
 import {
   Dialog,
@@ -202,7 +202,7 @@ const KanbanBoard = () => {
 
   const handleAddAttachment = () => {
     if (newAttachment.trim()) {
-      setAttachments([...attachments, newAttachment.trim()]);
+      setAttachments(prev => [...prev, newAttachment.trim()]);
       setNewAttachment('');
       
       toast({
