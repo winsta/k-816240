@@ -16,7 +16,7 @@ import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Label } from "./ui/label";
 import { Calendar } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { format, differenceInDays } from "date-fns";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 
@@ -216,44 +216,44 @@ const KanbanBoard = () => {
   };
 
   const handleAddTask = () => {
-    if (activeColumn && newTaskContent.trim()) {
-      const newTaskId = `task-${Date.now()}`;
-      const column = columns[activeColumn];
-      
-      // Ensure the date is set to end of day for due dates
-      const adjustedDueDate = newTaskDueDate ? new Date(newTaskDueDate.setHours(23, 59, 59, 999)) : undefined;
-      
-      const newTask: Task = {
-        id: newTaskId,
-        content: newTaskContent.trim(),
-        priority: newTaskPriority,
-        dueDate: adjustedDueDate,
-        tags: selectedTags,
-        subtasks: newSubtasks.filter(st => st.trim()).map(content => ({
-          id: `subtask-${Date.now()}-${Math.random()}`,
-          content,
-          completed: false
-        })),
-        clientName: clientName.trim(),
-        projectName: projectName.trim()
-      };
+    if (!activeColumn || !newTaskContent.trim()) return;
 
-      setColumns({
-        ...columns,
-        [activeColumn]: {
-          ...column,
-          items: [...column.items, newTask]
-        }
-      });
+    const newTaskId = `task-${Date.now()}`;
+    const column = columns[activeColumn];
+    
+    // Ensure the date is set to end of day for due dates
+    const adjustedDueDate = newTaskDueDate ? new Date(newTaskDueDate.setHours(23, 59, 59, 999)) : undefined;
+    
+    const newTask: Task = {
+      id: newTaskId,
+      content: newTaskContent.trim(),
+      priority: newTaskPriority,
+      dueDate: adjustedDueDate,
+      tags: selectedTags,
+      subtasks: newSubtasks.filter(st => st.trim()).map(content => ({
+        id: `subtask-${Date.now()}-${Math.random()}`,
+        content,
+        completed: false
+      })),
+      clientName: clientName.trim(),
+      projectName: projectName.trim()
+    };
 
-      setIsDialogOpen(false);
-      resetForm();
+    setColumns(prevColumns => ({
+      ...prevColumns,
+      [activeColumn]: {
+        ...column,
+        items: [...column.items, newTask]
+      }
+    }));
 
-      toast({
-        title: "Task added",
-        description: "New task has been added to the column",
-      });
-    }
+    setIsDialogOpen(false);
+    resetForm();
+
+    toast({
+      title: "Task added",
+      description: "New task has been added to the column",
+    });
   };
 
   const handleTagClick = (tag: string) => {
@@ -445,6 +445,169 @@ const KanbanBoard = () => {
           </div>
         </div>
       </DragDropContext>
+
+      {/* Add Task Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New Task</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="clientName">Client Name</Label>
+              <Input
+                id="clientName"
+                placeholder="Enter client name"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="projectName">Project Name</Label>
+              <Input
+                id="projectName"
+                placeholder="Enter project name"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="task">Task Description</Label>
+              <Input
+                id="task"
+                placeholder="Enter task description"
+                value={newTaskContent}
+                onChange={(e) => setNewTaskContent(e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Priority</Label>
+              <RadioGroup
+                value={newTaskPriority}
+                onValueChange={(value: 'low' | 'medium' | 'high') => setNewTaskPriority(value)}
+                className="flex space-x-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="low" id="low" />
+                  <Label htmlFor="low">Low</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="medium" id="medium" />
+                  <Label htmlFor="medium">Medium</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="high" id="high" />
+                  <Label htmlFor="high">High</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Due Date</Label>
+              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !newTaskDueDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {newTaskDueDate ? format(newTaskDueDate, "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={newTaskDueDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+                        setNewTaskDueDate(endOfDay);
+                      } else {
+                        setNewTaskDueDate(undefined);
+                      }
+                      setIsCalendarOpen(false);
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {predefinedTags.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant={selectedTags.includes(tag) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => handleTagClick(tag)}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add custom tag"
+                  value={customTag}
+                  onChange={(e) => setCustomTag(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddCustomTag();
+                    }
+                  }}
+                />
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={handleAddCustomTag}
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Subtasks</Label>
+              {newSubtasks.map((subtask, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    value={subtask}
+                    onChange={(e) => handleSubtaskChange(index, e.target.value)}
+                    placeholder={`Subtask ${index + 1}`}
+                  />
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleAddSubtaskField}
+                className="w-full"
+              >
+                <ListPlus className="mr-2 h-4 w-4" />
+                Add Subtask
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsDialogOpen(false);
+              resetForm();
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddTask}>Add Task</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Task Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
