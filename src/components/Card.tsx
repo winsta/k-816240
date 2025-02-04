@@ -3,8 +3,15 @@ import { Draggable } from 'react-beautiful-dnd';
 import { Badge } from './ui/badge';
 import { format, differenceInDays } from 'date-fns';
 import { Checkbox } from './ui/checkbox';
-import { ListPlus, AlertCircle, Edit, ChevronRight, ChevronDown, Users, Receipt } from 'lucide-react';
+import { ListPlus, AlertCircle, Edit, ChevronRight, ChevronDown, Users, Receipt, Upload } from 'lucide-react';
 import { Button } from './ui/button';
+
+interface ClientInfo {
+  contactNumber: string;
+  email: string;
+  companyName: string;
+  address: string;
+}
 
 interface TeamMember {
   id: string;
@@ -32,6 +39,7 @@ interface CardProps {
   tags: string[];
   subtasks: Subtask[];
   clientName: string;
+  clientInfo?: ClientInfo;
   projectName: string;
   isExpanded?: boolean;
   parentId?: string;
@@ -41,6 +49,7 @@ interface CardProps {
   assignedTeam?: TeamMember[];
   status: 'not-started' | 'in-progress' | 'completed';
   notes?: string;
+  attachments?: string[];
   onAddSubtask: (taskId: string) => void;
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
   onEditTask: (columnId: string, taskId: string) => void;
@@ -56,6 +65,7 @@ const Card = ({
   tags, 
   subtasks,
   clientName,
+  clientInfo,
   projectName,
   isExpanded,
   parentId,
@@ -65,6 +75,7 @@ const Card = ({
   assignedTeam,
   status,
   notes,
+  attachments,
   onAddSubtask,
   onToggleSubtask,
   onEditTask,
@@ -123,8 +134,17 @@ const Card = ({
               )}
               <div className="flex-1">
                 {clientName && (
-                  <div className="text-xs text-gray-500">
-                    Client: {clientName}
+                  <div className="space-y-1">
+                    <div className="text-xs text-gray-500">
+                      Client: {clientName}
+                    </div>
+                    {clientInfo && (
+                      <div className="text-xs text-gray-500">
+                        <div>{clientInfo.companyName}</div>
+                        <div>{clientInfo.email}</div>
+                        <div>{clientInfo.contactNumber}</div>
+                      </div>
+                    )}
                   </div>
                 )}
                 {projectName && (
@@ -208,6 +228,19 @@ const Card = ({
           {notes && (
             <div className="text-sm text-gray-600 mt-2">
               <p className="line-clamp-2">{notes}</p>
+            </div>
+          )}
+
+          {attachments && attachments.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Upload className="h-4 w-4 text-gray-500" />
+              <div className="flex flex-wrap gap-1">
+                {attachments.map((attachment, index) => (
+                  <Badge key={index} variant="outline" className="text-xs">
+                    {attachment}
+                  </Badge>
+                ))}
+              </div>
             </div>
           )}
 

@@ -4,10 +4,11 @@ import Card from './Card';
 import { Button } from './ui/button';
 import { Plus } from 'lucide-react';
 
-interface Subtask {
-  id: string;
-  content: string;
-  completed: boolean;
+interface ClientInfo {
+  contactNumber: string;
+  email: string;
+  companyName: string;
+  address: string;
 }
 
 interface Task {
@@ -18,6 +19,7 @@ interface Task {
   tags: string[];
   subtasks: Subtask[];
   clientName: string;
+  clientInfo?: ClientInfo;
   projectName: string;
   parentId?: string;
   isExpanded?: boolean;
@@ -25,6 +27,7 @@ interface Task {
   totalCost?: number;
   expenses?: { id: string; description: string; amount: number; }[];
   assignedTeam?: { id: string; name: string; }[];
+  attachments?: string[];
   notes?: string;
 }
 
@@ -82,6 +85,7 @@ const Column = ({
                 tags={card.tags}
                 subtasks={card.subtasks}
                 clientName={card.clientName}
+                clientInfo={card.clientInfo}
                 projectName={card.projectName}
                 isExpanded={card.isExpanded}
                 parentId={card.parentId}
@@ -90,6 +94,7 @@ const Column = ({
                 totalCost={card.totalCost}
                 expenses={card.expenses}
                 assignedTeam={card.assignedTeam}
+                attachments={card.attachments}
                 notes={card.notes}
                 onAddSubtask={onAddSubtask}
                 onToggleSubtask={onToggleSubtask}

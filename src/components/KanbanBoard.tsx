@@ -39,6 +39,13 @@ interface Subtask {
   completed: boolean;
 }
 
+interface ClientInfo {
+  contactNumber: string;
+  email: string;
+  companyName: string;
+  address: string;
+}
+
 interface Task {
   id: string;
   content: string;
@@ -47,6 +54,7 @@ interface Task {
   tags: string[];
   subtasks: Subtask[];
   clientName: string;
+  clientInfo?: ClientInfo;
   projectName: string;
   parentId?: string;
   isExpanded?: boolean;
@@ -167,7 +175,12 @@ const KanbanBoard = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState('');
   const [clientName, setClientName] = useState('');
-  const [projectName, setProjectName] = useState('');
+  const [clientContactNumber, setClientContactNumber] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
+  const [clientCompanyName, setClientCompanyName] = useState('');
+  const [clientAddress, setClientAddress] = useState('');
+  const [attachments, setAttachments] = useState<string[]>([]);
+  const [newAttachment, setNewAttachment] = useState('');
   const [newSubtasks, setNewSubtasks] = useState<string[]>([]);
   const [activeColumn, setActiveColumn] = useState<string | null>(null);
   const [isSubtaskDialogOpen, setIsSubtaskDialogOpen] = useState(false);
@@ -234,7 +247,12 @@ const KanbanBoard = () => {
     setSelectedTags([]);
     setCustomTag('');
     setClientName('');
-    setProjectName('');
+    setClientContactNumber('');
+    setClientEmail('');
+    setClientCompanyName('');
+    setClientAddress('');
+    setAttachments([]);
+    setNewAttachment('');
     setNewSubtasks([]);
     setIsDialogOpen(true);
   };
@@ -269,13 +287,19 @@ const KanbanBoard = () => {
         completed: false
       })),
       clientName: clientName.trim(),
+      clientInfo: {
+        contactNumber: clientContactNumber.trim(),
+        email: clientEmail.trim(),
+        companyName: clientCompanyName.trim(),
+        address: clientAddress.trim(),
+      },
       projectName: projectName.trim(),
       totalCost: parseFloat(totalCost) || 0,
       expenses: expenses,
       assignedTeam: assignedTeam,
       status: status,
+      attachments: attachments,
       notes: notes.trim(),
-      attachments: []
     };
 
     setColumns(prevColumns => ({
@@ -360,7 +384,11 @@ const KanbanBoard = () => {
       setNewTaskDueDate(task.dueDate);
       setSelectedTags(task.tags);
       setClientName(task.clientName);
-      setProjectName(task.projectName);
+      setClientContactNumber(task.clientInfo?.contactNumber || '');
+      setClientEmail(task.clientInfo?.email || '');
+      setClientCompanyName(task.clientInfo?.companyName || '');
+      setClientAddress(task.clientInfo?.address || '');
+      setAttachments(task.attachments || []);
       setIsEditDialogOpen(true);
     }
   };
@@ -384,6 +412,13 @@ const KanbanBoard = () => {
               dueDate: adjustedDueDate,
               tags: selectedTags,
               clientName: clientName.trim(),
+              clientInfo: {
+                contactNumber: clientContactNumber.trim(),
+                email: clientEmail.trim(),
+                companyName: clientCompanyName.trim(),
+                address: clientAddress.trim(),
+              },
+              attachments: attachments,
               projectName: projectName.trim(),
             };
             break;
@@ -410,7 +445,12 @@ const KanbanBoard = () => {
     setSelectedTags([]);
     setCustomTag('');
     setClientName('');
-    setProjectName('');
+    setClientContactNumber('');
+    setClientEmail('');
+    setClientCompanyName('');
+    setClientAddress('');
+    setAttachments([]);
+    setNewAttachment('');
     setNewSubtasks([]);
     setTotalCost('');
     setExpenses([]);
@@ -530,13 +570,54 @@ const KanbanBoard = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="projectName">Project Name</Label>
-              <Input
-                id="projectName"
-                placeholder="Enter project name"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-              />
+              <Label>Client Information</Label>
+              <div className="grid gap-4">
+                <Input
+                  placeholder="Contact Number"
+                  value={clientContactNumber}
+                  onChange={(e) => setClientContactNumber(e.target.value)}
+                />
+                <Input
+                  placeholder="Email"
+                  type="email"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                />
+                <Input
+                  placeholder="Company Name"
+                  value={clientCompanyName}
+                  onChange={(e) => setClientCompanyName(e.target.value)}
+                />
+                <Textarea
+                  placeholder="Client Address"
+                  value={clientAddress}
+                  onChange={(e) => setClientAddress(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Attachments</Label>
+              <div className="flex gap-2 mb-2">
+                <Input
+                  placeholder="Add file or document link"
+                  value={newAttachment}
+                  onChange={(e) => setNewAttachment(e.target.value)}
+                />
+                <Button type="button" onClick={handleAddAttachment}>Add</Button>
+              </div>
+              {attachments.map((attachment, index) => (
+                <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                  <span>{attachment}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAttachments(attachments.filter((_, i) => i !== index))}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
 
             <div className="space-y-2">
@@ -811,13 +892,54 @@ const KanbanBoard = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="projectName">Project Name</Label>
-              <Input
-                id="projectName"
-                placeholder="Enter project name"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-              />
+              <Label>Client Information</Label>
+              <div className="grid gap-4">
+                <Input
+                  placeholder="Contact Number"
+                  value={clientContactNumber}
+                  onChange={(e) => setClientContactNumber(e.target.value)}
+                />
+                <Input
+                  placeholder="Email"
+                  type="email"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                />
+                <Input
+                  placeholder="Company Name"
+                  value={clientCompanyName}
+                  onChange={(e) => setClientCompanyName(e.target.value)}
+                />
+                <Textarea
+                  placeholder="Client Address"
+                  value={clientAddress}
+                  onChange={(e) => setClientAddress(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Attachments</Label>
+              <div className="flex gap-2 mb-2">
+                <Input
+                  placeholder="Add file or document link"
+                  value={newAttachment}
+                  onChange={(e) => setNewAttachment(e.target.value)}
+                />
+                <Button type="button" onClick={handleAddAttachment}>Add</Button>
+              </div>
+              {attachments.map((attachment, index) => (
+                <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                  <span>{attachment}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAttachments(attachments.filter((_, i) => i !== index))}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
 
             <div className="space-y-2">
@@ -920,26 +1042,6 @@ const KanbanBoard = () => {
                   Add
                 </Button>
               </div>
-              {selectedTags.length > 0 && (
-                <div className="mt-2">
-                  <Label>Selected Tags:</Label>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {selectedTags.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="default"
-                        className="cursor-pointer"
-                      >
-                        {tag}
-                        <X
-                          className="ml-1 h-3 w-3"
-                          onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))}
-                        />
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
           <DialogFooter>
