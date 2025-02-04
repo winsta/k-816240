@@ -24,11 +24,14 @@ interface CardProps {
   projectName: string;
   isExpanded?: boolean;
   parentId?: string;
+  columnId: string; // Add columnId prop
   onAddSubtask: (taskId: string) => void;
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
-  onEditTask: (taskId: string) => void;
+  onEditTask: (columnId: string, taskId: string) => void;
   onToggleExpand?: (taskId: string) => void;
 }
+
+// ... keep existing code (getRemainingDays and getDueDateStatus functions)
 
 const Card = ({ 
   id, 
@@ -42,6 +45,7 @@ const Card = ({
   projectName,
   isExpanded,
   parentId,
+  columnId,
   onAddSubtask,
   onToggleSubtask,
   onEditTask,
@@ -109,7 +113,7 @@ const Card = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onEditTask(id)}
+              onClick={() => onEditTask(columnId, id)}
               className="ml-2"
             >
               <Edit className="h-4 w-4" />

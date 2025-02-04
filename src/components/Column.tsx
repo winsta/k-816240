@@ -30,7 +30,7 @@ interface ColumnProps {
   onAddTask: () => void;
   onAddSubtask: (taskId: string) => void;
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
-  onEditTask: (taskId: string) => void;
+  onEditTask: (columnId: string, taskId: string) => void;
   onToggleExpand?: (taskId: string) => void;
 }
 
@@ -80,9 +80,10 @@ const Column = ({
                 projectName={card.projectName}
                 isExpanded={card.isExpanded}
                 parentId={card.parentId}
+                columnId={id}
                 onAddSubtask={onAddSubtask}
                 onToggleSubtask={onToggleSubtask}
-                onEditTask={() => onEditTask(card.id)}
+                onEditTask={onEditTask}
                 onToggleExpand={onToggleExpand}
               />
             ))}
