@@ -4,6 +4,12 @@ import Card from './Card';
 import { Button } from './ui/button';
 import { Plus } from 'lucide-react';
 
+interface Subtask {
+  id: string;
+  content: string;
+  completed: boolean;
+}
+
 interface ClientInfo {
   contactNumber: string;
   email: string;

@@ -198,6 +198,19 @@ const KanbanBoard = () => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [projectName, setProjectName] = useState('');
+
+  const handleAddAttachment = () => {
+    if (newAttachment.trim()) {
+      setAttachments([...attachments, newAttachment.trim()]);
+      setNewAttachment('');
+      
+      toast({
+        title: "Attachment added",
+        description: "New attachment has been added to the task",
+      });
+    }
+  };
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
