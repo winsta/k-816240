@@ -3,7 +3,7 @@ import { Draggable } from 'react-beautiful-dnd';
 import { Badge } from './ui/badge';
 import { format, differenceInDays } from 'date-fns';
 import { Checkbox } from './ui/checkbox';
-import { ListPlus, AlertCircle } from 'lucide-react';
+import { ListPlus, AlertCircle, Edit, ChevronRight, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
 
 interface Subtask {
@@ -22,8 +22,12 @@ interface CardProps {
   subtasks: Subtask[];
   clientName: string;
   projectName: string;
+  isExpanded?: boolean;
+  parentId?: string;
   onAddSubtask: (taskId: string) => void;
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
+  onEditTask: (taskId: string) => void;
+  onToggleExpand?: (taskId: string) => void;
 }
 
 const Card = ({ 
@@ -36,8 +40,12 @@ const Card = ({
   subtasks,
   clientName,
   projectName,
+  isExpanded,
+  parentId,
   onAddSubtask,
-  onToggleSubtask 
+  onToggleSubtask,
+  onEditTask,
+  onToggleExpand
 }: CardProps) => {
   const getRemainingDays = () => {
     if (!dueDate) return null;
@@ -66,19 +74,47 @@ const Card = ({
           {...provided.dragHandleProps}
           className={`p-4 mb-3 rounded-lg bg-kanban-card shadow-sm hover:shadow-md transition-shadow duration-200 select-none space-y-2 ${
             snapshot.isDragging ? 'shadow-lg' : ''
-          }`}
+          } ${parentId ? 'ml-6' : ''}`}
         >
-          {clientName && (
-            <div className="text-xs text-gray-500">
-              Client: {clientName}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {subtasks.length > 0 && onToggleExpand && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-0 hover:bg-transparent"
+                  onClick={() => onToggleExpand(id)}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+              <div className="flex-1">
+                {clientName && (
+                  <div className="text-xs text-gray-500">
+                    Client: {clientName}
+                  </div>
+                )}
+                {projectName && (
+                  <div className="text-xs text-gray-500">
+                    Project: {projectName}
+                  </div>
+                )}
+                <p className="text-sm text-gray-700 cursor-default">{content}</p>
+              </div>
             </div>
-          )}
-          {projectName && (
-            <div className="text-xs text-gray-500">
-              Project: {projectName}
-            </div>
-          )}
-          <p className="text-sm text-gray-700 cursor-default">{content}</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEditTask(id)}
+              className="ml-2"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          </div>
           
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className={priorityColors[priority]}>

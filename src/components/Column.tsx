@@ -19,6 +19,8 @@ interface Task {
   subtasks: Subtask[];
   clientName: string;
   projectName: string;
+  parentId?: string;
+  isExpanded?: boolean;
 }
 
 interface ColumnProps {
@@ -28,9 +30,20 @@ interface ColumnProps {
   onAddTask: () => void;
   onAddSubtask: (taskId: string) => void;
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
+  onEditTask: (taskId: string) => void;
+  onToggleExpand?: (taskId: string) => void;
 }
 
-const Column = ({ id, title, cards, onAddTask, onAddSubtask, onToggleSubtask }: ColumnProps) => {
+const Column = ({ 
+  id, 
+  title, 
+  cards, 
+  onAddTask, 
+  onAddSubtask, 
+  onToggleSubtask,
+  onEditTask,
+  onToggleExpand
+}: ColumnProps) => {
   return (
     <div className="w-72 mx-2 flex flex-col">
       <div className="flex justify-between items-center mb-4">
@@ -65,8 +78,12 @@ const Column = ({ id, title, cards, onAddTask, onAddSubtask, onToggleSubtask }: 
                 subtasks={card.subtasks}
                 clientName={card.clientName}
                 projectName={card.projectName}
+                isExpanded={card.isExpanded}
+                parentId={card.parentId}
                 onAddSubtask={onAddSubtask}
                 onToggleSubtask={onToggleSubtask}
+                onEditTask={() => onEditTask(card.id)}
+                onToggleExpand={onToggleExpand}
               />
             ))}
             {provided.placeholder}

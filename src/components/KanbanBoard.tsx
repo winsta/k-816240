@@ -35,6 +35,8 @@ interface Task {
   subtasks: Subtask[];
   clientName: string;
   projectName: string;
+  parentId?: string; // Added for hierarchy
+  isExpanded?: boolean; // Added for expanding/collapsing
 }
 
 interface KanbanData {
@@ -147,6 +149,8 @@ const KanbanBoard = () => {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const { toast } = useToast();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -243,15 +247,7 @@ const KanbanBoard = () => {
       });
 
       setIsDialogOpen(false);
-      setNewTaskContent('');
-      setNewTaskPriority('medium');
-      setNewTaskDueDate(undefined);
-      setSelectedTags([]);
-      setCustomTag('');
-      setActiveColumn(null);
-      setClientName('');
-      setProjectName('');
-      setNewSubtasks([]);
+      resetForm();
 
       toast({
         title: "Task added",
@@ -313,6 +309,69 @@ const KanbanBoard = () => {
     });
   };
 
+  const handleEditTask = (columnId: string, taskId: string) => {
+    const task = columns[columnId].items.find(item => item.id === taskId);
+    if (task) {
+      setEditingTask(task);
+      setNewTaskContent(task.content);
+      setNewTaskPriority(task.priority);
+      setNewTaskDueDate(task.dueDate);
+      setSelectedTags(task.tags);
+      setClientName(task.clientName);
+      setProjectName(task.projectName);
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  const handleUpdateTask = () => {
+    if (editingTask && newTaskContent.trim()) {
+      setColumns(prevColumns => {
+        const newColumns = { ...prevColumns };
+        for (const columnId in newColumns) {
+          const column = newColumns[columnId];
+          const taskIndex = column.items.findIndex(task => task.id === editingTask.id);
+          
+          if (taskIndex !== -1) {
+            const adjustedDueDate = newTaskDueDate ? 
+              new Date(newTaskDueDate.setHours(23, 59, 59, 999)) : undefined;
+
+            column.items[taskIndex] = {
+              ...column.items[taskIndex],
+              content: newTaskContent.trim(),
+              priority: newTaskPriority,
+              dueDate: adjustedDueDate,
+              tags: selectedTags,
+              clientName: clientName.trim(),
+              projectName: projectName.trim(),
+            };
+            break;
+          }
+        }
+        return newColumns;
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingTask(null);
+      resetForm();
+      
+      toast({
+        title: "Task updated",
+        description: "The task has been updated successfully",
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setNewTaskContent('');
+    setNewTaskPriority('medium');
+    setNewTaskDueDate(undefined);
+    setSelectedTags([]);
+    setCustomTag('');
+    setClientName('');
+    setProjectName('');
+    setNewSubtasks([]);
+  };
+
   const handleSubtaskSubmit = () => {
     if (activeTaskId && newSubtaskContent.trim()) {
       setColumns(prevColumns => {
@@ -367,16 +426,28 @@ const KanbanBoard = () => {
                 onAddTask={() => addTask(columnId)}
                 onAddSubtask={handleAddSubtask}
                 onToggleSubtask={handleToggleSubtask}
+                onEditTask={handleEditTask}
+                onToggleExpand={(taskId) => {
+                  setColumns(prev => {
+                    const newColumns = { ...prev };
+                    const task = newColumns[columnId].items.find(item => item.id === taskId);
+                    if (task) {
+                      task.isExpanded = !task.isExpanded;
+                    }
+                    return newColumns;
+                  });
+                }}
               />
             ))}
           </div>
         </div>
       </DragDropContext>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* Edit Task Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Add New Task</DialogTitle>
+            <DialogTitle>Edit Task</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
@@ -433,7 +504,7 @@ const KanbanBoard = () => {
 
             <div className="space-y-2">
               <Label>Due Date</Label>
-              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+              <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -452,55 +523,17 @@ const KanbanBoard = () => {
                     selected={newTaskDueDate}
                     onSelect={(date) => {
                       if (date) {
-                        // Set time to end of day for due dates
                         const endOfDay = new Date(date.setHours(23, 59, 59, 999));
                         setNewTaskDueDate(endOfDay);
                       } else {
                         setNewTaskDueDate(undefined);
                       }
-                      setIsCalendarOpen(false);
                     }}
                     initialFocus
                     disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                   />
                 </PopoverContent>
               </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Subtasks</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddSubtaskField}
-                  className="flex items-center gap-1"
-                >
-                  <ListPlus className="h-4 w-4" />
-                  Add Subtask
-                </Button>
-              </div>
-              {newSubtasks.map((subtask, index) => (
-                <div key={index} className="flex gap-2">
-                  <Input
-                    placeholder="Enter subtask"
-                    value={subtask}
-                    onChange={(e) => handleSubtaskChange(index, e.target.value)}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      const updated = newSubtasks.filter((_, i) => i !== index);
-                      setNewSubtasks(updated);
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
             </div>
 
             <div className="space-y-2">
@@ -560,14 +593,19 @@ const KanbanBoard = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setIsEditDialogOpen(false);
+              setEditingTask(null);
+              resetForm();
+            }}>
               Cancel
             </Button>
-            <Button onClick={handleAddTask}>Add Task</Button>
+            <Button onClick={handleUpdateTask}>Update Task</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Subtask Dialog */}
       <Dialog open={isSubtaskDialogOpen} onOpenChange={setIsSubtaskDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
