@@ -310,7 +310,10 @@ const KanbanBoard = () => {
   };
 
   const handleEditTask = (columnId: string, taskId: string) => {
-    const task = columns[columnId].items.find(item => item.id === taskId);
+    const column = columns[columnId];
+    if (!column) return; // Early return if column not found
+    
+    const task = column.items.find(item => item.id === taskId);
     if (task) {
       setEditingTask(task);
       setNewTaskContent(task.content);
