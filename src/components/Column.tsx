@@ -21,6 +21,11 @@ interface Task {
   projectName: string;
   parentId?: string;
   isExpanded?: boolean;
+  status: 'not-started' | 'in-progress' | 'completed';
+  totalCost?: number;
+  expenses?: { id: string; description: string; amount: number; }[];
+  assignedTeam?: { id: string; name: string; }[];
+  notes?: string;
 }
 
 interface ColumnProps {
@@ -81,6 +86,11 @@ const Column = ({
                 isExpanded={card.isExpanded}
                 parentId={card.parentId}
                 columnId={id}
+                status={card.status}
+                totalCost={card.totalCost}
+                expenses={card.expenses}
+                assignedTeam={card.assignedTeam}
+                notes={card.notes}
                 onAddSubtask={onAddSubtask}
                 onToggleSubtask={onToggleSubtask}
                 onEditTask={onEditTask}
