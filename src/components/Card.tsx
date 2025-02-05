@@ -114,7 +114,7 @@ const Card = ({
           {...provided.dragHandleProps}
           className={`p-4 mb-3 rounded-lg bg-kanban-card shadow-sm hover:shadow-md transition-shadow duration-200 select-none space-y-2 ${
             snapshot.isDragging ? 'shadow-lg' : ''
-          } ${parentId ? 'ml-6' : ''}`}
+          } ${parentId ? 'ml-6 border-l-2 border-gray-200' : ''}`}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

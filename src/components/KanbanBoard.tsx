@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
 import Column from './Column';
 import { Button } from './ui/button';
@@ -199,6 +199,13 @@ const KanbanBoard = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [projectName, setProjectName] = useState('');
+  const [parentTaskId, setParentTaskId] = useState<string | null>(null);
+  const [availableParentTasks, setAvailableParentTasks] = useState<Task[]>([]);
+
+  useEffect(() => {
+    const allTasks: Task[] = Object.values(columns).flatMap(column => column.items);
+    setAvailableParentTasks(allTasks);
+  }, [columns]);
 
   const handleAddAttachment = () => {
     if (newAttachment.trim()) {
@@ -267,6 +274,7 @@ const KanbanBoard = () => {
     setAttachments([]);
     setNewAttachment('');
     setNewSubtasks([]);
+    setParentTaskId(null);
     setIsDialogOpen(true);
   };
 
@@ -283,9 +291,8 @@ const KanbanBoard = () => {
   const handleAddTask = () => {
     if (!activeColumn || !newTaskContent.trim()) return;
 
-    const newTaskId = `task-${Date.now()}`;
     const column = columns[activeColumn];
-    
+    const newTaskId = `task-${Date.now()}`;
     const adjustedDueDate = newTaskDueDate ? new Date(newTaskDueDate.setHours(23, 59, 59, 999)) : undefined;
     
     const newTask: Task = {
@@ -313,6 +320,7 @@ const KanbanBoard = () => {
       status: status,
       attachments: attachments,
       notes: notes.trim(),
+      parentId: parentTaskId // Add parent task reference
     };
 
     setColumns(prevColumns => ({
@@ -327,8 +335,8 @@ const KanbanBoard = () => {
     resetForm();
 
     toast({
-      title: "Task added",
-      description: "New task has been added to the column",
+      title: parentTaskId ? "Subtask added" : "Task added",
+      description: `New ${parentTaskId ? 'subtask' : 'task'} has been added to the column`,
     });
   };
 
@@ -470,6 +478,7 @@ const KanbanBoard = () => {
     setAssignedTeam([]);
     setStatus('not-started');
     setNotes('');
+    setParentTaskId(null);
   };
 
   const handleAddTeamMember = () => {
@@ -569,9 +578,26 @@ const KanbanBoard = () => {
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Task</DialogTitle>
-            <DialogDescription>Fill in the project details below.</DialogDescription>
+            <DialogDescription>Fill in the task details below.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {/* Add Parent Task Selection */}
+            <div className="space-y-2">
+              <Label>Parent Task (Optional)</Label>
+              <select
+                className="w-full p-2 border rounded-md"
+                value={parentTaskId || ''}
+                onChange={(e) => setParentTaskId(e.target.value || null)}
+              >
+                <option value="">No Parent Task</option>
+                {availableParentTasks.map((task) => (
+                  <option key={task.id} value={task.id}>
+                    {task.content}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="clientName">Client Name</Label>
               <Input
@@ -858,7 +884,9 @@ const KanbanBoard = () => {
             }}>
               Cancel
             </Button>
-            <Button onClick={handleAddTask}>Add Task</Button>
+            <Button onClick={handleAddTask}>
+              {parentTaskId ? 'Add Subtask' : 'Add Task'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
