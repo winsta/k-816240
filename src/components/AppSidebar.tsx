@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Settings, FolderKanban } from 'lucide-react';
+import { LayoutDashboard, Settings, FolderKanban, FileCode } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -22,6 +22,11 @@ const items = [
     title: "Projects",
     url: "/projects",
     icon: FolderKanban,
+  },
+  {
+    title: "Code Snippets",
+    url: "/code-snippets",
+    icon: FileCode,
   },
   {
     title: "Settings",
