@@ -201,11 +201,19 @@ const KanbanBoard = () => {
   const [projectName, setProjectName] = useState('');
   const [parentTaskId, setParentTaskId] = useState<string | null>(null);
   const [availableParentTasks, setAvailableParentTasks] = useState<Task[]>([]);
+  const [isExpanded, setIsExpanded] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     const allTasks: Task[] = Object.values(columns).flatMap(column => column.items);
     setAvailableParentTasks(allTasks);
   }, [columns]);
+
+  const toggleExpand = (taskId: string) => {
+    setIsExpanded(prev => ({
+      ...prev,
+      [taskId]: !prev[taskId]
+    }));
+  };
 
   const handleAddAttachment = () => {
     if (newAttachment.trim()) {
@@ -320,7 +328,8 @@ const KanbanBoard = () => {
       status: status,
       attachments: attachments,
       notes: notes.trim(),
-      parentId: parentTaskId // Add parent task reference
+      parentId: parentTaskId,
+      isExpanded: true
     };
 
     setColumns(prevColumns => ({
@@ -543,561 +552,488 @@ const KanbanBoard = () => {
   };
 
   return (
-    <>
-      <DragDropContext onDragEnd={onDragEnd}>
-        <div className="flex flex-col items-center min-h-screen bg-gray-50 p-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-8">Project Tasks</h1>
-          <div className="flex flex-wrap justify-center gap-4">
-            {Object.entries(columns).map(([columnId, column]) => (
-              <Column
-                key={columnId}
-                id={columnId}
-                title={column.title}
-                cards={column.items}
-                onAddTask={() => addTask(columnId)}
-                onAddSubtask={handleAddSubtask}
-                onToggleSubtask={handleToggleSubtask}
-                onEditTask={handleEditTask}
-                onToggleExpand={(taskId) => {
-                  setColumns(prev => {
-                    const newColumns = { ...prev };
-                    const task = newColumns[columnId].items.find(item => item.id === taskId);
-                    if (task) {
-                      task.isExpanded = !task.isExpanded;
-                    }
-                    return newColumns;
-                  });
-                }}
-              />
-            ))}
-          </div>
+    <DragDropContext onDragEnd={onDragEnd}>
+      <div className="flex flex-col items-center min-h-screen bg-gray-50 p-8">
+        <h1 className="text-3xl font-bold text-gray-800 mb-8">Project Tasks</h1>
+        <div className="flex flex-wrap justify-center gap-4">
+          {Object.entries(columns).map(([columnId, column]) => (
+            <Column
+              key={columnId}
+              id={columnId}
+              title={column.title}
+              cards={column.items}
+              onAddTask={() => addTask(columnId)}
+              onAddSubtask={handleAddSubtask}
+              onToggleSubtask={handleToggleSubtask}
+              onEditTask={handleEditTask}
+              onToggleExpand={toggleExpand}
+            />
+          ))}
         </div>
-      </DragDropContext>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add New Task</DialogTitle>
-            <DialogDescription>Fill in the task details below.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {/* Add Parent Task Selection */}
-            <div className="space-y-2">
-              <Label>Parent Task (Optional)</Label>
-              <select
-                className="w-full p-2 border rounded-md"
-                value={parentTaskId || ''}
-                onChange={(e) => setParentTaskId(e.target.value || null)}
-              >
-                <option value="">No Parent Task</option>
-                {availableParentTasks.map((task) => (
-                  <option key={task.id} value={task.id}>
-                    {task.content}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Add New Task</DialogTitle>
+              <DialogDescription>Fill in the task details below.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label>Parent Task (Optional)</Label>
+                <select
+                  className="w-full p-2 border rounded-md"
+                  value={parentTaskId || ''}
+                  onChange={(e) => setParentTaskId(e.target.value || null)}
+                >
+                  <option value="">No Parent Task</option>
+                  {availableParentTasks.map((task) => (
+                    <option key={task.id} value={task.id}>
+                      {task.content}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="clientName">Client Name</Label>
-              <Input
-                id="clientName"
-                placeholder="Enter client name"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Client Information</Label>
-              <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="task">Task Description</Label>
                 <Input
-                  placeholder="Contact Number"
-                  value={clientContactNumber}
-                  onChange={(e) => setClientContactNumber(e.target.value)}
-                />
-                <Input
-                  placeholder="Email"
-                  type="email"
-                  value={clientEmail}
-                  onChange={(e) => setClientEmail(e.target.value)}
-                />
-                <Input
-                  placeholder="Company Name"
-                  value={clientCompanyName}
-                  onChange={(e) => setClientCompanyName(e.target.value)}
-                />
-                <Textarea
-                  placeholder="Client Address"
-                  value={clientAddress}
-                  onChange={(e) => setClientAddress(e.target.value)}
+                  id="task"
+                  placeholder="Enter task description"
+                  value={newTaskContent}
+                  onChange={(e) => setNewTaskContent(e.target.value)}
                 />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label>Attachments</Label>
-              <div className="flex gap-2 mb-2">
-                <Input
-                  placeholder="Add file or document link"
-                  value={newAttachment}
-                  onChange={(e) => setNewAttachment(e.target.value)}
-                />
-                <Button type="button" onClick={handleAddAttachment}>Add</Button>
+              <div className="space-y-2">
+                <Label>Project Status</Label>
+                <RadioGroup
+                  value={status}
+                  onValueChange={(value: 'not-started' | 'in-progress' | 'completed') => setStatus(value)}
+                  className="flex space-x-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="not-started" id="not-started" />
+                    <Label htmlFor="not-started">Not Started</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="in-progress" id="in-progress" />
+                    <Label htmlFor="in-progress">In Progress</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="completed" id="completed" />
+                    <Label htmlFor="completed">Completed</Label>
+                  </div>
+                </RadioGroup>
               </div>
-              {attachments.map((attachment, index) => (
-                <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                  <span>{attachment}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setAttachments(attachments.filter((_, i) => i !== index))}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="task">Task Description</Label>
-              <Input
-                id="task"
-                placeholder="Enter task description"
-                value={newTaskContent}
-                onChange={(e) => setNewTaskContent(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Project Status</Label>
-              <RadioGroup
-                value={status}
-                onValueChange={(value: 'not-started' | 'in-progress' | 'completed') => setStatus(value)}
-                className="flex space-x-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="not-started" id="not-started" />
-                  <Label htmlFor="not-started">Not Started</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="in-progress" id="in-progress" />
-                  <Label htmlFor="in-progress">In Progress</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="completed" id="completed" />
-                  <Label htmlFor="completed">Completed</Label>
-                </div>
-              </RadioGroup>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Priority</Label>
-              <RadioGroup
-                value={newTaskPriority}
-                onValueChange={(value: 'low' | 'medium' | 'high') => setNewTaskPriority(value)}
-                className="flex space-x-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="low" id="low" />
-                  <Label htmlFor="low">Low</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="medium" id="medium" />
-                  <Label htmlFor="medium">Medium</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="high" id="high" />
-                  <Label htmlFor="high">High</Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Due Date</Label>
-              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !newTaskDueDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {newTaskDueDate ? format(newTaskDueDate, "PPP") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={newTaskDueDate}
-                    onSelect={(date) => {
-                      if (date) {
-                        const endOfDay = new Date(date.setHours(23, 59, 59, 999));
-                        setNewTaskDueDate(endOfDay);
-                      } else {
-                        setNewTaskDueDate(undefined);
-                      }
-                      setIsCalendarOpen(false);
-                    }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="totalCost">Project Total Cost</Label>
-              <Input
-                id="totalCost"
-                type="number"
-                placeholder="Enter total cost"
-                value={totalCost}
-                onChange={(e) => setTotalCost(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Project Expenses</Label>
-              <div className="flex gap-2 mb-2">
-                <Input
-                  placeholder="Expense description"
-                  value={newExpenseDescription}
-                  onChange={(e) => setNewExpenseDescription(e.target.value)}
-                />
-                <Input
-                  type="number"
-                  placeholder="Amount"
-                  value={newExpenseAmount}
-                  onChange={(e) => setNewExpenseAmount(e.target.value)}
-                />
-                <Button type="button" onClick={handleAddExpense}>Add</Button>
+              
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <RadioGroup
+                  value={newTaskPriority}
+                  onValueChange={(value: 'low' | 'medium' | 'high') => setNewTaskPriority(value)}
+                  className="flex space-x-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="low" id="low" />
+                    <Label htmlFor="low">Low</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="medium" id="medium" />
+                    <Label htmlFor="medium">Medium</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="high" id="high" />
+                    <Label htmlFor="high">High</Label>
+                  </div>
+                </RadioGroup>
               </div>
-              {expenses.map((expense) => (
-                <div key={expense.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                  <span>{expense.description}</span>
-                  <span>${expense.amount}</span>
-                </div>
-              ))}
-            </div>
 
-            <div className="space-y-2">
-              <Label>Team Members</Label>
-              <div className="flex gap-2 mb-2">
-                <Input
-                  placeholder="Enter team member name"
-                  value={newTeamMember}
-                  onChange={(e) => setNewTeamMember(e.target.value)}
-                />
-                <Button type="button" onClick={handleAddTeamMember}>Add</Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {assignedTeam.map((member) => (
-                  <Badge
-                    key={member.id}
-                    variant="secondary"
-                    className="flex items-center gap-1"
-                  >
-                    {member.name}
-                    <X
-                      className="h-3 w-3 cursor-pointer"
-                      onClick={() => setAssignedTeam(assignedTeam.filter(m => m.id !== member.id))}
+              <div className="space-y-2">
+                <Label>Due Date</Label>
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !newTaskDueDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newTaskDueDate ? format(newTaskDueDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={newTaskDueDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+                          setNewTaskDueDate(endOfDay);
+                        } else {
+                          setNewTaskDueDate(undefined);
+                        }
+                        setIsCalendarOpen(false);
+                      }}
+                      initialFocus
                     />
-                  </Badge>
-                ))}
+                  </PopoverContent>
+                </Popover>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label>Notes & Comments</Label>
-              <Textarea
-                placeholder="Add notes or comments"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="min-h-[100px]"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Tags</Label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {predefinedTags.map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant={selectedTags.includes(tag) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => handleTagClick(tag)}
-                  >
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-              <div className="flex gap-2">
+              <div className="space-y-2">
+                <Label htmlFor="totalCost">Project Total Cost</Label>
                 <Input
-                  placeholder="Add custom tag"
-                  value={customTag}
-                  onChange={(e) => setCustomTag(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddCustomTag();
-                    }
-                  }}
+                  id="totalCost"
+                  type="number"
+                  placeholder="Enter total cost"
+                  value={totalCost}
+                  onChange={(e) => setTotalCost(e.target.value)}
                 />
-                <Button 
-                  type="button" 
-                  variant="outline"
-                  onClick={handleAddCustomTag}
-                >
-                  Add
-                </Button>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label>Subtasks</Label>
-              {newSubtasks.map((subtask, index) => (
-                <div key={index} className="flex gap-2">
+              <div className="space-y-2">
+                <Label>Project Expenses</Label>
+                <div className="flex gap-2 mb-2">
                   <Input
-                    value={subtask}
-                    onChange={(e) => handleSubtaskChange(index, e.target.value)}
-                    placeholder={`Subtask ${index + 1}`}
+                    placeholder="Expense description"
+                    value={newExpenseDescription}
+                    onChange={(e) => setNewExpenseDescription(e.target.value)}
                   />
+                  <Input
+                    type="number"
+                    placeholder="Amount"
+                    value={newExpenseAmount}
+                    onChange={(e) => setNewExpenseAmount(e.target.value)}
+                  />
+                  <Button type="button" onClick={handleAddExpense}>Add</Button>
                 </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleAddSubtaskField}
-                className="w-full"
-              >
-                <ListPlus className="mr-2 h-4 w-4" />
-                Add Subtask
-              </Button>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsDialogOpen(false);
-              resetForm();
-            }}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddTask}>
-              {parentTaskId ? 'Add Subtask' : 'Add Task'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                {expenses.map((expense) => (
+                  <div key={expense.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                    <span>{expense.description}</span>
+                    <span>${expense.amount}</span>
+                  </div>
+                ))}
+              </div>
 
-      <Dialog open={isSubtaskDialogOpen} onOpenChange={setIsSubtaskDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Add Subtask</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="subtask">Subtask Description</Label>
-              <Input
-                id="subtask"
-                placeholder="Enter subtask description"
-                value={newSubtaskContent}
-                onChange={(e) => setNewSubtaskContent(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSubtaskDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubtaskSubmit}>Add Subtask</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <div className="space-y-2">
+                <Label>Team Members</Label>
+                <div className="flex gap-2 mb-2">
+                  <Input
+                    placeholder="Enter team member name"
+                    value={newTeamMember}
+                    onChange={(e) => setNewTeamMember(e.target.value)}
+                  />
+                  <Button type="button" onClick={handleAddTeamMember}>Add</Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {assignedTeam.map((member) => (
+                    <Badge
+                      key={member.id}
+                      variant="secondary"
+                      className="flex items-center gap-1"
+                    >
+                      {member.name}
+                      <X
+                        className="h-3 w-3 cursor-pointer"
+                        onClick={() => setAssignedTeam(assignedTeam.filter(m => m.id !== member.id))}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              </div>
 
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Edit Task</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="clientName">Client Name</Label>
-              <Input
-                id="clientName"
-                placeholder="Enter client name"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Client Information</Label>
-              <div className="grid gap-4">
-                <Input
-                  placeholder="Contact Number"
-                  value={clientContactNumber}
-                  onChange={(e) => setClientContactNumber(e.target.value)}
-                />
-                <Input
-                  placeholder="Email"
-                  type="email"
-                  value={clientEmail}
-                  onChange={(e) => setClientEmail(e.target.value)}
-                />
-                <Input
-                  placeholder="Company Name"
-                  value={clientCompanyName}
-                  onChange={(e) => setClientCompanyName(e.target.value)}
-                />
+              <div className="space-y-2">
+                <Label>Notes & Comments</Label>
                 <Textarea
-                  placeholder="Client Address"
-                  value={clientAddress}
-                  onChange={(e) => setClientAddress(e.target.value)}
+                  placeholder="Add notes or comments"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="min-h-[100px]"
                 />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label>Attachments</Label>
-              <div className="flex gap-2 mb-2">
-                <Input
-                  placeholder="Add file or document link"
-                  value={newAttachment}
-                  onChange={(e) => setNewAttachment(e.target.value)}
-                />
-                <Button type="button" onClick={handleAddAttachment}>Add</Button>
-              </div>
-              {attachments.map((attachment, index) => (
-                <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                  <span>{attachment}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setAttachments(attachments.filter((_, i) => i !== index))}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {predefinedTags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant={selectedTags.includes(tag) ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => handleTagClick(tag)}
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
                 </div>
-              ))}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="task">Task Description</Label>
-              <Input
-                id="task"
-                placeholder="Enter task description"
-                value={newTaskContent}
-                onChange={(e) => setNewTaskContent(e.target.value)}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Priority</Label>
-              <RadioGroup
-                value={newTaskPriority}
-                onValueChange={(value: 'low' | 'medium' | 'high') => setNewTaskPriority(value)}
-                className="flex space-x-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="low" id="low" />
-                  <Label htmlFor="low">Low</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="medium" id="medium" />
-                  <Label htmlFor="medium">Medium</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="high" id="high" />
-                  <Label htmlFor="high">High</Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Due Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !newTaskDueDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {newTaskDueDate ? format(newTaskDueDate, "PPP") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={newTaskDueDate}
-                    onSelect={(date) => {
-                      if (date) {
-                        const endOfDay = new Date(date.setHours(23, 59, 59, 999));
-                        setNewTaskDueDate(endOfDay);
-                      } else {
-                        setNewTaskDueDate(undefined);
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add custom tag"
+                    value={customTag}
+                    onChange={(e) => setCustomTag(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCustomTag();
                       }
                     }}
-                    initialFocus
-                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                   />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Tags</Label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {predefinedTags.map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant={selectedTags.includes(tag) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => handleTagClick(tag)}
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={handleAddCustomTag}
                   >
-                    {tag}
-                  </Badge>
-                ))}
+                    Add
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Add custom tag"
-                  value={customTag}
-                  onChange={(e) => setCustomTag(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddCustomTag();
-                    }
-                  }}
-                />
-                <Button 
-                  type="button" 
+
+              <div className="space-y-2">
+                <Label>Subtasks</Label>
+                {newSubtasks.map((subtask, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      value={subtask}
+                      onChange={(e) => handleSubtaskChange(index, e.target.value)}
+                      placeholder={`Subtask ${index + 1}`}
+                    />
+                  </div>
+                ))}
+                <Button
+                  type="button"
                   variant="outline"
-                  onClick={handleAddCustomTag}
+                  onClick={handleAddSubtaskField}
+                  className="w-full"
                 >
-                  Add
+                  <ListPlus className="mr-2 h-4 w-4" />
+                  Add Subtask
                 </Button>
               </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsEditDialogOpen(false);
-              setEditingTask(null);
-              resetForm();
-            }}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateTask}>Update Task</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setIsDialogOpen(false);
+                resetForm();
+              }}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddTask}>
+                {parentTaskId ? 'Add Subtask' : 'Add Task'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isSubtaskDialogOpen} onOpenChange={setIsSubtaskDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Add Subtask</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="subtask">Subtask Description</Label>
+                <Input
+                  id="subtask"
+                  placeholder="Enter subtask description"
+                  value={newSubtaskContent}
+                  onChange={(e) => setNewSubtaskContent(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsSubtaskDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubtaskSubmit}>Add Subtask</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Edit Task</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="clientName">Client Name</Label>
+                <Input
+                  id="clientName"
+                  placeholder="Enter client name"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Client Information</Label>
+                <div className="grid gap-4">
+                  <Input
+                    placeholder="Contact Number"
+                    value={clientContactNumber}
+                    onChange={(e) => setClientContactNumber(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Email"
+                    type="email"
+                    value={clientEmail}
+                    onChange={(e) => setClientEmail(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Company Name"
+                    value={clientCompanyName}
+                    onChange={(e) => setClientCompanyName(e.target.value)}
+                  />
+                  <Textarea
+                    placeholder="Client Address"
+                    value={clientAddress}
+                    onChange={(e) => setClientAddress(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Attachments</Label>
+                <div className="flex gap-2 mb-2">
+                  <Input
+                    placeholder="Add file or document link"
+                    value={newAttachment}
+                    onChange={(e) => setNewAttachment(e.target.value)}
+                  />
+                  <Button type="button" onClick={handleAddAttachment}>Add</Button>
+                </div>
+                {attachments.map((attachment, index) => (
+                  <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                    <span>{attachment}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setAttachments(attachments.filter((_, i) => i !== index))}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="task">Task Description</Label>
+                <Input
+                  id="task"
+                  placeholder="Enter task description"
+                  value={newTaskContent}
+                  onChange={(e) => setNewTaskContent(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <RadioGroup
+                  value={newTaskPriority}
+                  onValueChange={(value: 'low' | 'medium' | 'high') => setNewTaskPriority(value)}
+                  className="flex space-x-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="low" id="low" />
+                    <Label htmlFor="low">Low</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="medium" id="medium" />
+                    <Label htmlFor="medium">Medium</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="high" id="high" />
+                    <Label htmlFor="high">High</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Due Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !newTaskDueDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newTaskDueDate ? format(newTaskDueDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={newTaskDueDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+                          setNewTaskDueDate(endOfDay);
+                        } else {
+                          setNewTaskDueDate(undefined);
+                        }
+                      }}
+                      initialFocus
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {predefinedTags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant={selectedTags.includes(tag) ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => handleTagClick(tag)}
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add custom tag"
+                    value={customTag}
+                    onChange={(e) => setCustomTag(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCustomTag();
+                      }
+                    }}
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={handleAddCustomTag}
+                  >
+                    Add
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setIsEditDialogOpen(false);
+                setEditingTask(null);
+                resetForm();
+              }}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateTask}>Update Task</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </DragDropContext>
   );
 };
 

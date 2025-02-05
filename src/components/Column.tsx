@@ -2,7 +2,7 @@ import React from 'react';
 import { Droppable } from 'react-beautiful-dnd';
 import Card from './Card';
 import { Button } from './ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, ChevronRight, ChevronDown } from 'lucide-react';
 
 interface Subtask {
   id: string;
@@ -58,6 +58,69 @@ const Column = ({
   onEditTask,
   onToggleExpand
 }: ColumnProps) => {
+  const renderCards = (cardsToRender: Task[], level = 0) => {
+    return cardsToRender
+      .filter(card => !card.parentId) // Only render top-level cards
+      .map((card, index) => {
+        const childCards = cardsToRender.filter(c => c.parentId === card.id);
+        const hasChildren = childCards.length > 0;
+
+        return (
+          <div key={card.id} className="space-y-2">
+            <div className="flex items-start">
+              {hasChildren && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-0 h-6 w-6 mr-1"
+                  onClick={() => onToggleExpand?.(card.id)}
+                >
+                  {card.isExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+              <div className={`flex-1 ${level > 0 ? 'ml-6' : ''}`}>
+                <Card 
+                  key={card.id} 
+                  id={card.id} 
+                  index={index} 
+                  content={card.content}
+                  priority={card.priority}
+                  dueDate={card.dueDate}
+                  tags={card.tags}
+                  subtasks={card.subtasks}
+                  clientName={card.clientName}
+                  clientInfo={card.clientInfo}
+                  projectName={card.projectName}
+                  isExpanded={card.isExpanded}
+                  parentId={card.parentId}
+                  columnId={id}
+                  status={card.status}
+                  totalCost={card.totalCost}
+                  expenses={card.expenses}
+                  assignedTeam={card.assignedTeam}
+                  attachments={card.attachments}
+                  notes={card.notes}
+                  onAddSubtask={onAddSubtask}
+                  onToggleSubtask={onToggleSubtask}
+                  onEditTask={onEditTask}
+                  onToggleExpand={onToggleExpand}
+                />
+              </div>
+            </div>
+            {hasChildren && card.isExpanded && (
+              <div className="ml-4">
+                {renderCards(childCards, level + 1)}
+              </div>
+            )}
+          </div>
+        );
+      });
+  };
+
   return (
     <div className="w-72 mx-2 flex flex-col">
       <div className="flex justify-between items-center mb-4">
@@ -80,34 +143,7 @@ const Column = ({
               snapshot.isDraggingOver ? 'bg-kanban-columnHover' : ''
             }`}
           >
-            {cards.map((card, index) => (
-              <Card 
-                key={card.id} 
-                id={card.id} 
-                index={index} 
-                content={card.content}
-                priority={card.priority}
-                dueDate={card.dueDate}
-                tags={card.tags}
-                subtasks={card.subtasks}
-                clientName={card.clientName}
-                clientInfo={card.clientInfo}
-                projectName={card.projectName}
-                isExpanded={card.isExpanded}
-                parentId={card.parentId}
-                columnId={id}
-                status={card.status}
-                totalCost={card.totalCost}
-                expenses={card.expenses}
-                assignedTeam={card.assignedTeam}
-                attachments={card.attachments}
-                notes={card.notes}
-                onAddSubtask={onAddSubtask}
-                onToggleSubtask={onToggleSubtask}
-                onEditTask={onEditTask}
-                onToggleExpand={onToggleExpand}
-              />
-            ))}
+            {renderCards(cards)}
             {provided.placeholder}
           </div>
         )}
