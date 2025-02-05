@@ -419,6 +419,12 @@ const KanbanBoard = () => {
       setClientCompanyName(task.clientInfo?.companyName || '');
       setClientAddress(task.clientInfo?.address || '');
       setAttachments(task.attachments || []);
+      setProjectName(task.projectName);
+      setTotalCost(task.totalCost?.toString() || '');
+      setExpenses(task.expenses || []);
+      setAssignedTeam(task.assignedTeam || []);
+      setStatus(task.status);
+      setNotes(task.notes || '');
       setIsEditDialogOpen(true);
     }
   };
@@ -852,11 +858,100 @@ const KanbanBoard = () => {
         </Dialog>
 
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Task</DialogTitle>
+              <DialogDescription>Update the task details below.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="task">Task Description</Label>
+                <Input
+                  id="task"
+                  placeholder="Enter task description"
+                  value={newTaskContent}
+                  onChange={(e) => setNewTaskContent(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Project Status</Label>
+                <RadioGroup
+                  value={status}
+                  onValueChange={(value: 'not-started' | 'in-progress' | 'completed') => setStatus(value)}
+                  className="flex space-x-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="not-started" id="not-started" />
+                    <Label htmlFor="not-started">Not Started</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="in-progress" id="in-progress" />
+                    <Label htmlFor="in-progress">In Progress</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="completed" id="completed" />
+                    <Label htmlFor="completed">Completed</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <RadioGroup
+                  value={newTaskPriority}
+                  onValueChange={(value: 'low' | 'medium' | 'high') => setNewTaskPriority(value)}
+                  className="flex space-x-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="low" id="low" />
+                    <Label htmlFor="low">Low</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="medium" id="medium" />
+                    <Label htmlFor="medium">Medium</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="high" id="high" />
+                    <Label htmlFor="high">High</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Due Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !newTaskDueDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newTaskDueDate ? format(newTaskDueDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={newTaskDueDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+                          setNewTaskDueDate(endOfDay);
+                        } else {
+                          setNewTaskDueDate(undefined);
+                        }
+                      }}
+                      initialFocus
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="clientName">Client Name</Label>
                 <Input
@@ -916,72 +1011,6 @@ const KanbanBoard = () => {
                     </Button>
                   </div>
                 ))}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="task">Task Description</Label>
-                <Input
-                  id="task"
-                  placeholder="Enter task description"
-                  value={newTaskContent}
-                  onChange={(e) => setNewTaskContent(e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Priority</Label>
-                <RadioGroup
-                  value={newTaskPriority}
-                  onValueChange={(value: 'low' | 'medium' | 'high') => setNewTaskPriority(value)}
-                  className="flex space-x-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="low" id="low" />
-                    <Label htmlFor="low">Low</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="medium" id="medium" />
-                    <Label htmlFor="medium">Medium</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="high" id="high" />
-                    <Label htmlFor="high">High</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Due Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !newTaskDueDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {newTaskDueDate ? format(newTaskDueDate, "PPP") : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={newTaskDueDate}
-                      onSelect={(date) => {
-                        if (date) {
-                          const endOfDay = new Date(date.setHours(23, 59, 59, 999));
-                          setNewTaskDueDate(endOfDay);
-                        } else {
-                          setNewTaskDueDate(undefined);
-                        }
-                      }}
-                      initialFocus
-                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                    />
-                  </PopoverContent>
-                </Popover>
               </div>
 
               <div className="space-y-2">
