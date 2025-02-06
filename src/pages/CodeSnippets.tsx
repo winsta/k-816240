@@ -27,7 +27,7 @@ const CodeSnippets = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentSnippet, setCurrentSnippet] = useState<CodeSnippet | null>(null);
   const [newSnippet, setNewSnippet] = useState<CodeSnippet>({
-    id: '',  // Initialize with empty string, will be set when adding
+    id: '',
     title: '',
     description: '',
     codeBlocks: [{ id: '1', code: '', language: '' }]
@@ -78,10 +78,17 @@ const CodeSnippets = () => {
   const handleAddSnippet = () => {
     const snippet: CodeSnippet = {
       id: Date.now().toString(),
-      ...newSnippet
+      title: newSnippet.title,
+      description: newSnippet.description,
+      codeBlocks: newSnippet.codeBlocks
     };
     setSnippets([...snippets, snippet]);
-    setNewSnippet({ title: '', description: '', codeBlocks: [{ id: '1', code: '', language: '' }] });
+    setNewSnippet({
+      id: '',
+      title: '',
+      description: '',
+      codeBlocks: [{ id: '1', code: '', language: '' }]
+    });
     setIsAddDialogOpen(false);
     toast({
       title: "Success",

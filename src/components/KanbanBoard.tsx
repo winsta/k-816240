@@ -200,11 +200,6 @@ const KanbanBoard = () => {
   const [projectName, setProjectName] = useState('');
   const [isExpanded, setIsExpanded] = useState<{ [key: string]: boolean }>({});
 
-  useEffect(() => {
-    const allTasks: Task[] = Object.values(columns).flatMap(column => column.items);
-    setAvailableParentTasks(allTasks);
-  }, [columns]);
-
   const toggleExpand = (taskId: string) => {
     setIsExpanded(prev => ({
       ...prev,
