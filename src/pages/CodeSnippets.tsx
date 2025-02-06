@@ -26,7 +26,8 @@ const CodeSnippets = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentSnippet, setCurrentSnippet] = useState<CodeSnippet | null>(null);
-  const [newSnippet, setNewSnippet] = useState<Omit<CodeSnippet, 'id'>>({
+  const [newSnippet, setNewSnippet] = useState<CodeSnippet>({
+    id: '',  // Initialize with empty string, will be set when adding
     title: '',
     description: '',
     codeBlocks: [{ id: '1', code: '', language: '' }]
@@ -42,15 +43,15 @@ const CodeSnippets = () => {
       language: ''
     };
     
-    if (isEditing) {
+    if (isEditing && currentSnippet) {
       setCurrentSnippet({
-        ...snippet,
-        codeBlocks: [...snippet.codeBlocks, newBlock]
+        ...currentSnippet,
+        codeBlocks: [...currentSnippet.codeBlocks, newBlock]
       });
     } else {
       setNewSnippet({
-        ...snippet,
-        codeBlocks: [...snippet.codeBlocks, newBlock]
+        ...newSnippet,
+        codeBlocks: [...newSnippet.codeBlocks, newBlock]
       });
     }
   };
@@ -61,14 +62,14 @@ const CodeSnippets = () => {
     
     const updatedBlocks = snippet.codeBlocks.filter(block => block.id !== blockId);
     
-    if (isEditing) {
+    if (isEditing && currentSnippet) {
       setCurrentSnippet({
-        ...snippet,
+        ...currentSnippet,
         codeBlocks: updatedBlocks
       });
     } else {
       setNewSnippet({
-        ...snippet,
+        ...newSnippet,
         codeBlocks: updatedBlocks
       });
     }
