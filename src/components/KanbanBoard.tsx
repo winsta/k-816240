@@ -229,6 +229,13 @@ const KanbanBoard = () => {
 
     const { source, destination } = result;
 
+    // Map column IDs to status
+    const columnToStatus: { [key: string]: 'not-started' | 'in-progress' | 'completed' } = {
+      todo: 'not-started',
+      inProgress: 'in-progress',
+      done: 'completed'
+    };
+
     if (source.droppableId === destination.droppableId) {
       const column = columns[source.droppableId];
       const copiedItems = [...column.items];
@@ -248,7 +255,14 @@ const KanbanBoard = () => {
       const sourceItems = [...sourceColumn.items];
       const destItems = [...destColumn.items];
       const [removed] = sourceItems.splice(source.index, 1);
-      destItems.splice(destination.index, 0, removed);
+      
+      // Update the task's status based on the destination column
+      const updatedTask = {
+        ...removed,
+        status: columnToStatus[destination.droppableId]
+      };
+      
+      destItems.splice(destination.index, 0, updatedTask);
 
       setColumns({
         ...columns,
@@ -260,6 +274,12 @@ const KanbanBoard = () => {
           ...destColumn,
           items: destItems,
         },
+      });
+
+      // Show a toast notification
+      toast({
+        title: "Status Updated",
+        description: `Task status changed to ${columnToStatus[destination.droppableId].replace('-', ' ')}`,
       });
     }
   };
