@@ -4,15 +4,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FilePlus, Copy, Edit, Trash } from "lucide-react";
+import { FilePlus, Copy, Edit, Trash, Plus, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+
+interface CodeBlock {
+  id: string;
+  code: string;
+  language: string;
+}
 
 interface CodeSnippet {
   id: string;
   title: string;
   description: string;
-  code: string;
-  language: string;
+  codeBlocks: CodeBlock[];
 }
 
 const CodeSnippets = () => {
@@ -21,12 +26,53 @@ const CodeSnippets = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentSnippet, setCurrentSnippet] = useState<CodeSnippet | null>(null);
-  const [newSnippet, setNewSnippet] = useState({
+  const [newSnippet, setNewSnippet] = useState<Omit<CodeSnippet, 'id'>>({
     title: '',
     description: '',
-    code: '',
-    language: ''
+    codeBlocks: [{ id: '1', code: '', language: '' }]
   });
+
+  const handleAddCodeBlock = (isEditing: boolean) => {
+    const snippet = isEditing ? currentSnippet : newSnippet;
+    if (!snippet) return;
+    
+    const newBlock = {
+      id: Date.now().toString(),
+      code: '',
+      language: ''
+    };
+    
+    if (isEditing) {
+      setCurrentSnippet({
+        ...snippet,
+        codeBlocks: [...snippet.codeBlocks, newBlock]
+      });
+    } else {
+      setNewSnippet({
+        ...snippet,
+        codeBlocks: [...snippet.codeBlocks, newBlock]
+      });
+    }
+  };
+
+  const handleRemoveCodeBlock = (blockId: string, isEditing: boolean) => {
+    const snippet = isEditing ? currentSnippet : newSnippet;
+    if (!snippet || snippet.codeBlocks.length <= 1) return;
+    
+    const updatedBlocks = snippet.codeBlocks.filter(block => block.id !== blockId);
+    
+    if (isEditing) {
+      setCurrentSnippet({
+        ...snippet,
+        codeBlocks: updatedBlocks
+      });
+    } else {
+      setNewSnippet({
+        ...snippet,
+        codeBlocks: updatedBlocks
+      });
+    }
+  };
 
   const handleAddSnippet = () => {
     const snippet: CodeSnippet = {
@@ -34,7 +80,7 @@ const CodeSnippets = () => {
       ...newSnippet
     };
     setSnippets([...snippets, snippet]);
-    setNewSnippet({ title: '', description: '', code: '', language: '' });
+    setNewSnippet({ title: '', description: '', codeBlocks: [{ id: '1', code: '', language: '' }] });
     setIsAddDialogOpen(false);
     toast({
       title: "Success",
@@ -80,6 +126,52 @@ const CodeSnippets = () => {
     }
   };
 
+  const renderCodeBlockInputs = (
+    blocks: CodeBlock[],
+    isEditing: boolean,
+    onChange: (blockId: string, field: 'code' | 'language', value: string) => void
+  ) => (
+    <div className="space-y-4">
+      {blocks.map((block, index) => (
+        <div key={block.id} className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium">Code Block {index + 1}</h4>
+            {blocks.length > 1 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleRemoveCodeBlock(block.id, isEditing)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <Input
+            placeholder="Language"
+            value={block.language}
+            onChange={(e) => onChange(block.id, 'language', e.target.value)}
+            className="mb-2"
+          />
+          <Textarea
+            placeholder="Code"
+            value={block.code}
+            className="font-mono"
+            onChange={(e) => onChange(block.id, 'code', e.target.value)}
+          />
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => handleAddCodeBlock(isEditing)}
+        className="w-full"
+      >
+        <Plus className="mr-2 h-4 w-4" />
+        Add Code Block
+      </Button>
+    </div>
+  );
+
   return (
     <div className="container py-8">
       <div className="flex justify-between items-center mb-6">
@@ -91,7 +183,7 @@ const CodeSnippets = () => {
               Add Snippet
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New Code Snippet</DialogTitle>
             </DialogHeader>
@@ -101,22 +193,21 @@ const CodeSnippets = () => {
                 value={newSnippet.title}
                 onChange={(e) => setNewSnippet({ ...newSnippet, title: e.target.value })}
               />
-              <Input
-                placeholder="Language"
-                value={newSnippet.language}
-                onChange={(e) => setNewSnippet({ ...newSnippet, language: e.target.value })}
-              />
               <Textarea
                 placeholder="Description"
                 value={newSnippet.description}
                 onChange={(e) => setNewSnippet({ ...newSnippet, description: e.target.value })}
               />
-              <Textarea
-                placeholder="Code"
-                value={newSnippet.code}
-                className="font-mono"
-                onChange={(e) => setNewSnippet({ ...newSnippet, code: e.target.value })}
-              />
+              {renderCodeBlockInputs(
+                newSnippet.codeBlocks,
+                false,
+                (blockId, field, value) => {
+                  const updatedBlocks = newSnippet.codeBlocks.map(block =>
+                    block.id === blockId ? { ...block, [field]: value } : block
+                  );
+                  setNewSnippet({ ...newSnippet, codeBlocks: updatedBlocks });
+                }
+              )}
               <Button onClick={handleAddSnippet}>Save Snippet</Button>
             </div>
           </DialogContent>
@@ -127,24 +218,28 @@ const CodeSnippets = () => {
         {snippets.map((snippet) => (
           <Card key={snippet.id}>
             <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                <span>{snippet.title}</span>
-                <span className="text-sm text-muted-foreground">{snippet.language}</span>
-              </CardTitle>
+              <CardTitle>{snippet.title}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">{snippet.description}</p>
-              <pre className="bg-muted p-4 rounded-md overflow-x-auto">
-                <code>{snippet.code}</code>
-              </pre>
+              {snippet.codeBlocks.map((block, index) => (
+                <div key={block.id} className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium">{block.language}</span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => copyToClipboard(block.code)}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <pre className="bg-muted p-4 rounded-md overflow-x-auto">
+                    <code>{block.code}</code>
+                  </pre>
+                </div>
+              ))}
               <div className="flex justify-end gap-2 mt-4">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => copyToClipboard(snippet.code)}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
                 <Button
                   variant="outline"
                   size="icon"
@@ -169,7 +264,7 @@ const CodeSnippets = () => {
       </div>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Code Snippet</DialogTitle>
           </DialogHeader>
@@ -182,13 +277,6 @@ const CodeSnippets = () => {
                   setCurrentSnippet({ ...currentSnippet, title: e.target.value })
                 }
               />
-              <Input
-                placeholder="Language"
-                value={currentSnippet.language}
-                onChange={(e) =>
-                  setCurrentSnippet({ ...currentSnippet, language: e.target.value })
-                }
-              />
               <Textarea
                 placeholder="Description"
                 value={currentSnippet.description}
@@ -196,14 +284,16 @@ const CodeSnippets = () => {
                   setCurrentSnippet({ ...currentSnippet, description: e.target.value })
                 }
               />
-              <Textarea
-                placeholder="Code"
-                value={currentSnippet.code}
-                className="font-mono"
-                onChange={(e) =>
-                  setCurrentSnippet({ ...currentSnippet, code: e.target.value })
+              {renderCodeBlockInputs(
+                currentSnippet.codeBlocks,
+                true,
+                (blockId, field, value) => {
+                  const updatedBlocks = currentSnippet.codeBlocks.map(block =>
+                    block.id === blockId ? { ...block, [field]: value } : block
+                  );
+                  setCurrentSnippet({ ...currentSnippet, codeBlocks: updatedBlocks });
                 }
-              />
+              )}
               <Button onClick={handleEditSnippet}>Update Snippet</Button>
             </div>
           )}
